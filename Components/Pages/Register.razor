@@ -1,0 +1,192 @@
+@page "/register"
+@using Journal.Data
+@using Journal.Entities
+@inject AppDbContext Db
+@inject PinService PinService
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<div class="auth-container">
+    <div class="auth-box">
+        <div class="auth-header">
+            <h1 class="auth-logo">Register</h1>
+            <p class="auth-subtitle">Create your personal journal account</p>
+        </div>
+
+        <div class="auth-content">
+            @if (Step == 1)
+            {
+                <!-- STEP 1: ACCOUNT DETAILS -->
+                <div class="info-view">
+                    <div class="input-group">
+                        <input type="text" class="username-input" @bind="Username" placeholder="Username" />
+                    </div>
+                    <div class="input-group">
+                        <input type="email" class="username-input" @bind="Email" placeholder="Email Address" />
+                    </div>
+                    <div class="input-group">
+                        <input type="password" class="password-input" @bind="Password" placeholder="Password" />
+                    </div>
+                    <div class="input-group">
+                        <input type="password" class="password-input" @bind="ConfirmPassword" placeholder="Confirm Password" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Error))
+                    {
+                        <p class="auth-error">@Error</p>
+                    }
+
+                    <button class="submit-btn" @onclick="GoToPinSetup">Continue to PIN Setup</button>
+                    
+                    <div class="auth-footer">
+                        <button class="link-btn" @onclick='() => Nav.NavigateTo("/authentication")'>Already have an account? Login</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- STEP 2: PIN SETUP -->
+                <p class="pin-hint">@(Step == 2 ? "Choose a 4-digit App Lock PIN" : "Confirm your PIN")</p>
+
+                <div class="pin-display">
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="pin-dot @(i < (Step == 2 ? Pin1.Length : Pin2.Length) ? "filled" : "")"></div>
+                    }
+                </div>
+
+                <div class="numpad">
+                    @foreach (var num in Numbers)
+                    {
+                        <button class="num-btn" @onclick="() => AddPin(num)">
+                            @num
+                        </button>
+                    }
+                    <button class="num-btn empty"></button>
+                    <button class="num-btn" @onclick="() => AddPin('0')">0</button>
+                    <button class="num-btn delete-btn" @onclick="DeletePin">⌫</button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Error))
+                {
+                    <p class="auth-error">@Error</p>
+                }
+                
+                <div class="auth-footer">
+                    <button class="link-btn" @onclick="() => Step = 1">← Back to account details</button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="auth-background">
+        <div class="bg-pattern"></div>
+    </div>
+</div>
+
+@code {
+    private string Username = "";
+    private string Email = "";
+    private string Password = "";
+    private string ConfirmPassword = "";
+    
+    private string Pin1 = "";
+    private string Pin2 = "";
+    private int Step = 1; // 1: Info, 2: PIN Setup, 3: PIN Confirm
+    private string Error = "";
+
+    private char[] Numbers = { '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+
+    private void GoToPinSetup()
+    {
+        Error = "";
+        
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+        {
+            Error = "All fields are required";
+            return;
+        }
+
+        if (Password != ConfirmPassword)
+        {
+            Error = "Passwords do not match";
+            return;
+        }
+
+        if (Password.Length < 6)
+        {
+            Error = "Password must be at least 6 characters";
+            return;
+        }
+
+        if (Db.Users.Any(u => u.Username.ToLower() == Username.ToLower()))
+        {
+            Error = "Username is already taken";
+            return;
+        }
+
+        if (Db.Users.Any(u => u.Email.ToLower() == Email.ToLower()))
+        {
+            Error = "Email is already registered";
+            return;
+        }
+
+        Step = 2;
+    }
+
+    private async Task AddPin(char digit)
+    {
+        Error = "";
+        if (Step == 2)
+        {
+            if (Pin1.Length < 4) Pin1 += digit;
+            if (Pin1.Length == 4) Step = 3;
+        }
+        else
+        {
+            if (Pin2.Length < 4) Pin2 += digit;
+            if (Pin2.Length == 4) await HandleRegister();
+        }
+    }
+
+    private void DeletePin()
+    {
+        if (Step == 2)
+        {
+            if (Pin1.Length > 0) Pin1 = Pin1[..^1];
+        }
+        else
+        {
+            if (Pin2.Length > 0) Pin2 = Pin2[..^1];
+            else Step = 2;
+        }
+    }
+
+    private async Task HandleRegister()
+    {
+        if (Pin1 != Pin2)
+        {
+            Error = "PINs do not match. Try again.";
+            Step = 2;
+            Pin1 = "";
+            Pin2 = "";
+            return;
+        }
+
+        var newUser = new User
+        {
+            Username = Username,
+            Email = Email,
+            PasswordHash = PinService.HashPin(Password), // Reusing PinService's Hash for simplicity since it's just a SHA256
+            PinHash = PinService.HashPin(Pin1),
+            CreatedAt = DateTime.Now
+        };
+
+        Db.Users.Add(newUser);
+        await Db.SaveChangesAsync();
+
+        Auth.Authenticate(newUser);
+        Auth.Unlock(); // Auto-unlock after fresh registration
+        Nav.NavigateTo("/");
+    }
+}

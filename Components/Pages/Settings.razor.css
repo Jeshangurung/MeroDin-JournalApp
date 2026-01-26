@@ -1,0 +1,76 @@
+.settings-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+}
+
+.settings-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 2rem;
+    color: var(--text-color);
+}
+
+.settings-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.settings-section h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+}
+
+.settings-message {
+    margin-top: 1rem;
+    color: var(--accent-color);
+}
+
+/* ===== Theme Selector ===== */
+.theme-selector {
+    display: flex;
+    gap: 1rem;
+}
+
+.theme-btn {
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.theme-btn:hover {
+    border-color: var(--accent-color);
+}
+
+.theme-btn.active {
+    background: var(--accent-color);
+    color: var(--accent-text);
+    border-color: var(--accent-color);
+}
+
+/* ===== Buttons ===== */
+
+.logout-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background: var(--accent-color);
+    color: var(--accent-text);
+}

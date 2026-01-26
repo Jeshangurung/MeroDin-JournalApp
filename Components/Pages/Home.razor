@@ -1,0 +1,288 @@
+﻿@page "/"
+@inject Journal.Services.IJournalService JournalService
+@inject NavigationManager Navigation
+
+<main class="dashboard">
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">@Greeting</h1>
+            <p class="hero-subtitle">@DateTime.Today.ToString("MMMM dd, yyyy")</p>
+            <button class="cta-button" @onclick='() => Navigation.NavigateTo("/write")'>
+                New Entry
+            </button>
+        </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-value">@Streak</div>
+            <div class="stat-label">Current Streak</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">⭐</div>
+            <div class="stat-value">@LongestStreak</div>
+            <div class="stat-label">Longest Streak</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">📝</div>
+            <div class="stat-value">@TotalEntries</div>
+            <div class="stat-label">Total Entries</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value">@AvgWords</div>
+            <div class="stat-label">Avg Words</div>
+        </div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="analytics">
+
+        <div class="analytics-row">
+
+            <!-- MOOD DISTRIBUTION -->
+            <div class="chart-card">
+                <h3 class="card-title">Mood Distribution</h3>
+
+                @if (!MoodCounts.Any())
+                {
+                    <p>No mood data yet.</p>
+                }
+                else
+                {
+                    @foreach (var mood in MoodCounts.OrderByDescending(x => x.Value))
+                    {
+                        <div class="mood-bar-item">
+                            <span class="mood-label">@mood.Key</span>
+                            <div class="mood-bar-container">
+                                <div class="mood-bar"
+                                     style="width:@MoodPercentage(mood.Key)%; background-color: #000000;">
+                                </div>
+                            </div>
+                            <span class="mood-percentage">
+                                @MoodPercentage(mood.Key).ToString("0")%
+                            </span>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- CATEGORY PIE -->
+            <div class="chart-card">
+                <h3 class="card-title">Most Used Categories</h3>
+
+                @if (!CategoryStats.Any())
+                {
+                    <p>No data available</p>
+                }
+                else
+                {
+                    <div class="pie-wrapper">
+                        <svg width="200" height="200" viewBox="0 0 36 36"
+                             class="pie-chart">
+                            @{
+                                double offset = 0;
+                                int index = 0;
+                            }
+
+                            @foreach (var item in CategoryStats)
+                            {
+                                <circle r="16"
+                                        cx="18"
+                                        cy="18"
+                                        fill="transparent"
+                                        stroke="@PieColors[index % PieColors.Count]"
+                                        stroke-width="4"
+                                        stroke-dasharray="@item.Percentage 100"
+                                        stroke-dashoffset="@offset" />
+                                offset -= item.Percentage;
+                                index++;
+                            }
+                        </svg>
+
+                        <div class="pie-legend">
+                            @for (int i = 0; i < CategoryStats.Count; i++)
+                            {
+                                <div class="legend-item">
+                                    <span class="legend-color"
+                                          style="background:@PieColors[i % PieColors.Count]"></span>
+                                    <span>
+                                        @CategoryStats[i].Category
+                                        (@CategoryStats[i].Percentage%)
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- RECENT ENTRIES -->
+        <div class="analytics-row">
+            <div class="chart-card full-width">
+                <h3 class="card-title">Recent Entries</h3>
+
+                @if (!RecentEntries.Any())
+                {
+                    <p>No entries yet.</p>
+                }
+                else
+                {
+                    <div class="recent-entries">
+                        @foreach (var entry in RecentEntries)
+                        {
+                            <div class="entry-preview"
+                                 @onclick="() => NavigateToEntry(entry.Id)">
+                                <div class="entry-date">
+                                    @entry.EntryDate.ToString("MMM dd, yyyy")
+                                </div>
+                                <div class="entry-title">
+                                    @(string.IsNullOrEmpty(entry.Category)
+                                        ? "Untitled"
+                                        : entry.Category)
+                                </div>
+                                <div class="entry-mood">
+                                    @entry.PrimaryMood
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+    </section>
+</main>
+
+@code {
+
+    private List<Journal.Models.JournalEntryDisplayModel> AllEntries = new();
+    private List<Journal.Models.JournalEntryDisplayModel> RecentEntries = new();
+
+    private int TotalEntries;
+    private int AvgWords;
+    private int Streak;
+    private int LongestStreak;
+
+    private Dictionary<string, int> MoodCounts = new();
+
+    private List<CategoryPieItem> CategoryStats = new();
+
+    private readonly List<string> PieColors = new()
+    {
+        "#000000", "#666666", "#999999", "#cccccc", "#444444"
+    };
+
+    private string Greeting =>
+        DateTime.Now.Hour < 12 ? "Good Morning" :
+        DateTime.Now.Hour < 17 ? "Good Afternoon" :
+        "Good Evening";
+
+    protected override async Task OnInitializedAsync()
+    {
+        AllEntries = await JournalService.GetAllAsync();
+        RecentEntries = AllEntries.Take(3).ToList();
+
+        TotalEntries = AllEntries.Count;
+        AvgWords = TotalEntries == 0
+            ? 0
+            : (int)AllEntries.Average(e => e.WordCount);
+
+        CalculateMoodDistribution();
+        CalculateCategoryPie();
+        CalculateStreaks();
+    }
+
+    private void CalculateMoodDistribution()
+    {
+        MoodCounts = AllEntries
+            .GroupBy(e => string.IsNullOrWhiteSpace(e.PrimaryMood)
+                ? "Neutral"
+                : e.PrimaryMood)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    private double MoodPercentage(string mood)
+    {
+        if (!MoodCounts.ContainsKey(mood) || TotalEntries == 0)
+            return 0;
+
+        return (double)MoodCounts[mood] / TotalEntries * 100;
+    }
+
+    private void CalculateCategoryPie()
+    {
+        if (!AllEntries.Any()) return;
+
+        CategoryStats = AllEntries
+            .GroupBy(e => string.IsNullOrWhiteSpace(e.Category)
+                ? "Other"
+                : e.Category)
+            .Select(g => new CategoryPieItem
+            {
+                Category = g.Key,
+                Percentage = Math.Round(
+                    (double)g.Count() / TotalEntries * 100, 1)
+            })
+            .OrderByDescending(c => c.Percentage)
+            .Take(5)
+            .ToList();
+    }
+
+    private void CalculateStreaks()
+    {
+        if (!AllEntries.Any()) return;
+
+        var dates = AllEntries
+            .Select(e => e.EntryDate.Date)
+            .Distinct()
+            .OrderByDescending(d => d)
+            .ToList();
+
+        Streak = 0;
+        var today = DateTime.Today;
+
+        foreach (var d in dates)
+        {
+            if (d == today.AddDays(-Streak))
+                Streak++;
+            else
+                break;
+        }
+
+        LongestStreak = 1;
+        int temp = 1;
+
+        for (int i = 1; i < dates.Count; i++)
+        {
+            if ((dates[i - 1] - dates[i]).Days == 1)
+            {
+                temp++;
+                LongestStreak = Math.Max(LongestStreak, temp);
+            }
+            else
+            {
+                temp = 1;
+            }
+        }
+    }
+
+    private void NavigateToEntry(int id)
+    {
+        Navigation.NavigateTo($"/write/{id}");
+    }
+
+    private class CategoryPieItem
+    {
+        public string Category { get; set; } = "";
+        public double Percentage { get; set; }
+    }
+}

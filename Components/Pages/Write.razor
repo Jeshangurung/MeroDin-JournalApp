@@ -1,0 +1,288 @@
+﻿@page "/write"
+@page "/write/{Id:int}"
+@using Journal.Data
+@using Journal.Entities
+@implements IDisposable
+@inject Journal.Services.IJournalService JournalService
+@inject IJSRuntime JS
+
+@inject NavigationManager Navigation
+@inject NavigationManager Nav
+@inject AppDbContext Db
+
+<h3>Write</h3>
+
+<EditForm EditContext="editContext" OnSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <main class="editor-container">
+        <div class="editor-wrapper">
+
+            <!-- Date / Time -->
+            <div class="editor-header">
+                <div class="entry-date">
+                    <h1 class="date-display">@(IsEdit ? model.EntryDate.ToString("MMMM dd, yyyy") : DateTime.Today.ToString("MMMM dd, yyyy"))</h1>
+                    <p class="time-display">@DateTime.Now.ToString("hh:mm tt")</p>
+                </div>
+            </div>
+
+            <!-- Entry Content -->
+            <div class="entry-form">
+                <div id="@EditorId" class="entry-content"></div>
+
+                <div class="word-count">
+                    @WordCount words
+                </div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="metadata-section">
+
+                <!-- Primary Mood -->
+                <div class="metadata-card">
+                    <h3 class="metadata-title">Primary Mood</h3>
+                    <div class="mood-grid">
+                        @foreach (var mood in PrimaryMoods)
+                        {
+                            <button type="button"
+                                    class="mood-item @(model.PrimaryMood == mood ? "selected" : "")"
+                                    @onclick="() => model.PrimaryMood = mood">
+                                @mood
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Secondary Moods -->
+                <div class="metadata-card">
+                    <h3 class="metadata-title">Secondary Moods (Optional)</h3>
+                    <div class="mood-grid secondary">
+                        @foreach (var mood in SecondaryMoods)
+                        {
+                            <button type="button"
+                                    class="mood-item small @(IsSecondarySelected(mood) ? "selected" : "")"
+                                    @onclick="() => ToggleSecondaryMood(mood)">
+                                @mood
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Category -->
+                <div class="metadata-card">
+                    <h3 class="metadata-title">Category</h3>
+                    <select class="category-select" @bind="model.Category">
+                        <option value="">Select Category</option>
+                        <option>Personal</option>
+                        <option>Work</option>
+                        <option>Health</option>
+                        <option>Relationships</option>
+                        <option>Personal Growth</option>
+                    </select>
+                </div>
+
+                <!-- Actions -->
+                <div class="metadata-card">
+                    <div class="action-buttons">
+                        <button type="submit" class="save-btn">
+                            @(IsEdit ? "Update Entry" : "Save Today’s Entry")
+                        </button>
+
+                        @if (IsEdit)
+                        {
+                            <button type="button" class="delete-btn" @onclick="DeleteEntry">
+                                Delete Entry
+                            </button>
+                        }
+                    </div>
+
+                    @if (Saved)
+                    {
+                        <p class="success-text">Entry saved successfully ✔</p>
+                    }
+
+                    @if (IsEdit)
+                    {
+                        <div class="entry-timestamps">
+                            <p>Created: @model.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")</p>
+                            <p>Last Updated: @model.UpdatedAt.ToString("MMM dd, yyyy hh:mm tt")</p>
+                        </div>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </main>
+</EditForm>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private Journal.Models.JournalEntryViewModel model = new();
+    private EditContext? editContext;
+    private bool Saved = false;
+    private const string EditorId = "quill-editor";
+    private bool _quillReady;
+    private bool IsEdit => Id.HasValue;
+    private DotNetObjectReference<Write>? _objRef;
+
+    private readonly string[] PrimaryMoods =
+    {
+        "😊 Happy", "🤩 Excited", "😌 Relaxed",
+        "🙏 Grateful", "😐 Calm", "😢 Sad",
+        "😰 Stressed", "😟 Anxious"
+    };
+
+    private readonly string[] SecondaryMoods =
+    {
+        "💪 Confident", "🧐 Curious",
+        "🌅 Nostalgic", "😑 Bored",
+        "😠 Angry", "😔 Lonely"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue)
+        {
+            var existing = await JournalService.GetByIdAsync(Id.Value);
+            if (existing != null)
+            {
+                model = existing;
+            }
+        }
+        else
+        {
+            var existing = await JournalService.GetTodayAsync();
+            if (existing != null)
+            {
+                model = existing;
+            }
+        }
+        editContext = new EditContext(model);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("initQuill", EditorId, _objRef);
+            _quillReady = true;
+            await JS.InvokeVoidAsync("setQuillHtml", model.Content ?? string.Empty);
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void UpdateContent(string html)
+    {
+        model.Content = html;
+        StateHasChanged();
+    }
+
+    private int WordCount =>
+        string.IsNullOrWhiteSpace(model.Content)
+            ? 0
+            : System.Text.RegularExpressions.Regex.Replace(model.Content, "<.*?>", string.Empty)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
+    private bool IsSecondarySelected(string mood) =>
+        model.SecondaryMood1 == mood || model.SecondaryMood2 == mood;
+
+    private void ToggleSecondaryMood(string mood)
+    {
+        if (model.SecondaryMood1 == mood)
+            model.SecondaryMood1 = null;
+        else if (model.SecondaryMood2 == mood)
+            model.SecondaryMood2 = null;
+        else if (string.IsNullOrEmpty(model.SecondaryMood1))
+            model.SecondaryMood1 = mood;
+        else if (string.IsNullOrEmpty(model.SecondaryMood2))
+            model.SecondaryMood2 = mood;
+    }
+
+    private async Task HandleSubmit()
+    {
+        // Final sync just in case
+        if (_quillReady)
+        {
+            model.Content = await JS.InvokeAsync<string>("getQuillHtml");
+        }
+
+        if (editContext != null && editContext.Validate())
+        {
+            await JournalService.CreateOrUpdateAsync(model, Id);
+            Saved = true;
+
+            if (!IsEdit)
+            {
+                // Clear the editor and reset model after a short delay or immediately
+                if (_quillReady)
+                {
+                    await JS.InvokeVoidAsync("setQuillHtml", string.Empty);
+                }
+                model = new();
+                editContext = new EditContext(model);
+            }
+
+            // Optional: Reset Saved status after some time
+            await Task.Delay(3000);
+            Saved = false;
+            StateHasChanged();
+
+            if (IsEdit)
+            {
+                Navigation.NavigateTo("/list");
+            }
+        }
+    }
+
+    private async Task DeleteEntry()
+    {
+        if (Id.HasValue)
+        {
+            var confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this entry?");
+            if (confirmed)
+            {
+                await JournalService.DeleteAsync(Id.Value);
+                Navigation.NavigateTo("/list");
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _objRef?.Dispose();
+    }
+}
+
+@code {
+    DateTime SelectedDate = DateTime.Today;
+    string EntryText = "";
+    string SelectedMood = "";
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+
+        if (query["date"] != null)
+        {
+            SelectedDate = DateTime.Parse(query["date"]!);
+            LoadEntryForDate();
+        }
+    }
+
+    void LoadEntryForDate()
+    {
+        var entry = Db.JournalEntries
+                      .FirstOrDefault(e => e.EntryDate.Date == SelectedDate.Date);
+
+        if (entry != null)
+        {
+            EntryText = entry.Content;
+            SelectedMood = entry.PrimaryMood;
+        }
+    }
+}
+

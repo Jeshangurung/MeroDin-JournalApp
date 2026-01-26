@@ -1,0 +1,52 @@
+﻿.pin-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.pin-display {
+    display: flex;
+    gap: 14px;
+}
+
+.pin-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--text-color);
+}
+
+.pin-dot.filled {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.pin-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 60px);
+    gap: 1rem;
+    justify-content: center;
+}
+
+.pin-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pin-btn:hover {
+    background: var(--accent-color);
+    color: var(--accent-text);
+    border-color: var(--accent-color);
+}
+
+.pin-btn.delete {
+    font-size: 1.1rem;
+}

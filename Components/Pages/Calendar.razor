@@ -1,0 +1,154 @@
+﻿@page "/calendar"
+@using Journal.Data
+@using Journal.Entities
+
+
+
+@inject AppDbContext Db
+@inject NavigationManager Nav
+
+<h3>Calendar</h3>
+
+<main class="calendar-container">
+
+    <!-- Header -->
+    <div class="calendar-header">
+        <div class="month-navigation">
+            <button class="nav-arrow" @onclick="PrevMonth">
+                ‹
+            </button>
+
+            <h2 class="month-display">
+                @CurrentMonth.ToString("MMMM yyyy")
+            </h2>
+
+            <button class="nav-arrow" @onclick="NextMonth">
+                ›
+            </button>
+        </div>
+
+        <button class="today-btn" @onclick="GoToToday">
+            Today
+        </button>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="calendar-grid">
+        <div class="calendar-header-row">
+            @foreach (var day in WeekDays)
+            {
+                <div class="day-header">@day</div>
+            }
+        </div>
+
+        <div class="calendar-body">
+            @foreach (var day in CalendarDays)
+            {
+                <div class="calendar-day
+                         @(day.IsOtherMonth ? "other-month" : "")
+                         @(day.HasEntry ? "has-entry" : "")
+                         @(day.Date.Date == DateTime.Today ? "today" : "")"
+                     @onclick="() => OpenEntry(day)">
+
+                    <span class="day-number">@day.Date.Day</span>
+
+                    @if (day.HasEntry)
+                    {
+                        <div class="entry-indicator">
+                            @day.MoodEmoji
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+</main>
+
+@code {
+    DateTime CurrentMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+    readonly string[] WeekDays = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
+    List<CalendarDay> CalendarDays = new();
+
+    protected override void OnInitialized()
+    {
+        LoadCalendar();
+    }
+
+    void PrevMonth()
+    {
+        CurrentMonth = CurrentMonth.AddMonths(-1);
+        LoadCalendar();
+    }
+
+    void NextMonth()
+    {
+        CurrentMonth = CurrentMonth.AddMonths(1);
+        LoadCalendar();
+    }
+
+    void GoToToday()
+    {
+        CurrentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        LoadCalendar();
+    }
+
+    void LoadCalendar()
+    {
+        CalendarDays.Clear();
+
+        var firstDay = CurrentMonth;
+        var startDay = firstDay.AddDays(-(int)firstDay.DayOfWeek);
+        var entries = Db.JournalEntries
+                        .Where(e => e.EntryDate.Month == CurrentMonth.Month &&
+                                    e.EntryDate.Year == CurrentMonth.Year)
+                        .ToList();
+
+        for (int i = 0; i < 42; i++)
+        {
+            var date = startDay.AddDays(i);
+            var entry = entries.FirstOrDefault(e => e.EntryDate.Date == date.Date);
+
+            CalendarDays.Add(new CalendarDay
+            {
+                Date = date,
+                IsOtherMonth = date.Month != CurrentMonth.Month,
+                HasEntry = entry != null,
+                MoodEmoji = entry != null ? GetMoodEmoji(entry.PrimaryMood) : ""
+            });
+        }
+    }
+
+    void OpenEntry(CalendarDay day)
+    {
+        if (!day.HasEntry) return;
+
+        Nav.NavigateTo($"/write?date={day.Date:yyyy-MM-dd}");
+    }
+
+    string GetMoodEmoji(string mood) => mood switch
+    {
+        "Happy" => "😊",
+        "Excited" => "🤩",
+        "Relaxed" => "😌",
+        "Grateful" => "🙏",
+        "Confident" => "⭐",
+        "Calm" => "😐",
+        "Thoughtful" => "🤔",
+        "Sad" => "😢",
+        "Angry" => "😠",
+        "Stressed" => "😰",
+        "Anxious" => "😟",
+        _ => "📝"
+    };
+
+    class CalendarDay
+    {
+        public DateTime Date { get; set; }
+        public bool IsOtherMonth { get; set; }
+        public bool HasEntry { get; set; }
+        public string MoodEmoji { get; set; } = "";
+    }
+}

@@ -1,0 +1,154 @@
+﻿@page "/authentication"
+@using Journal.Data
+@using Journal.Entities
+@inject AppDbContext Db
+@inject PinService PinService
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<div class="auth-container">
+    <div class="auth-box">
+        <div class="auth-header">
+            <h1 class="auth-logo">Journal</h1>
+            <p class="auth-subtitle">@(Auth.IsAuthenticated ? "Journal is Locked" : "Login to your account")</p>
+        </div>
+
+        <div class="auth-content">
+            @if (!Auth.IsAuthenticated)
+            {
+                <!-- STEP 1: PASSWORD LOGIN -->
+                <div class="info-view">
+                    <div class="input-group">
+                        <input type="text" class="username-input" @bind="Identifier" placeholder="Username or Email" />
+                    </div>
+                    <div class="input-group">
+                        <input type="password" class="password-input" @bind="Password" placeholder="Password" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Error))
+                    {
+                        <p class="auth-error">@Error</p>
+                    }
+
+                    <button class="submit-btn" @onclick="HandleLogin">Login</button>
+
+                    <div class="auth-footer">
+                        <button class="link-btn" @onclick='() => Nav.NavigateTo("/register")'>Don't have an account? Register</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- STEP 2: APP LOCK (PIN) -->
+                <p class="pin-hint">Enter your 4-digit App Lock PIN</p>
+
+                <div class="pin-display">
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="pin-dot @(i < EnteredPin.Length ? "filled" : "")"></div>
+                    }
+                </div>
+
+                <div class="numpad">
+                    @foreach (var num in Numbers)
+                    {
+                        <button class="num-btn" @onclick="() => AddPin(num)">
+                            @num
+                        </button>
+                    }
+                    <button class="num-btn empty"></button>
+                    <button class="num-btn" @onclick="() => AddPin('0')">0</button>
+                    <button class="num-btn delete-btn" @onclick="DeletePin">⌫</button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Error))
+                {
+                    <p class="auth-error">@Error</p>
+                }
+
+                <div class="auth-footer">
+                    <button class="link-btn" @onclick="Auth.Logout">Switch User / Logout</button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="auth-background">
+        <div class="bg-pattern"></div>
+    </div>
+</div>
+
+@code {
+    // Login Fields
+    private string Identifier = "";
+    private string Password = "";
+    
+    // PIN Fields
+    private string EnteredPin = "";
+    
+    private string Error = "";
+
+    private char[] Numbers = { '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+
+    protected override void OnInitialized()
+    {
+        if (Auth.IsUnlocked)
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+
+    private void HandleLogin()
+    {
+        Error = "";
+
+        if (string.IsNullOrWhiteSpace(Identifier) || string.IsNullOrWhiteSpace(Password))
+        {
+            Error = "Identifier and password required";
+            return;
+        }
+
+        var passHash = PinService.HashPin(Password);
+        
+        var user = Db.Users.FirstOrDefault(u => 
+            (u.Username.ToLower() == Identifier.ToLower() || u.Email.ToLower() == Identifier.ToLower()) && 
+            u.PasswordHash == passHash);
+
+        if (user == null)
+        {
+            Error = "Invalid credentials";
+            return;
+        }
+
+        Auth.Authenticate(user);
+        // Stays on this page to show PIN pad
+    }
+
+    private void AddPin(char digit)
+    {
+        if (EnteredPin.Length >= 4) return;
+        EnteredPin += digit;
+        if (EnteredPin.Length == 4) VerifyPin();
+    }
+
+    private void DeletePin()
+    {
+        if (EnteredPin.Length > 0) EnteredPin = EnteredPin[..^1];
+    }
+
+    private void VerifyPin()
+    {
+        if (Auth.CurrentUser == null) return;
+
+        if (Auth.CurrentUser.PinHash == PinService.HashPin(EnteredPin))
+        {
+            Auth.Unlock();
+            Nav.NavigateTo("/");
+        }
+        else
+        {
+            Error = "Incorrect PIN";
+            EnteredPin = "";
+        }
+    }
+}

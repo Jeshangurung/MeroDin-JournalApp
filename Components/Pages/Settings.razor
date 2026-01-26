@@ -1,0 +1,128 @@
+﻿@page "/settings"
+@using Journal.Data
+@using Journal.Entities
+
+@inject Journal.Services.ThemeService ThemeService
+@inject AppDbContext Db
+@inject PinService PinService
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<div class="settings-container">
+    <h2 class="settings-title">Settings</h2>
+
+<div class="settings-section">
+    <h3>Change PIN</h3>
+
+    @if (Step == 1)
+    {
+        <p>Enter current PIN</p>
+        <PinPad Pin="@CurrentPin"
+                PinChanged="v => CurrentPin = v"
+                OnCompleted="VerifyCurrentPin" />
+    }
+    else if (Step == 2)
+    {
+        <p>Enter new PIN</p>
+        <PinPad Pin="@NewPin"
+                PinChanged="v => NewPin = v"
+                OnCompleted="NextStep" />
+    }
+    else if (Step == 3)
+    {
+        <p>Confirm new PIN</p>
+        <PinPad Pin="@ConfirmPin"
+                PinChanged="v => ConfirmPin = v"
+                OnCompleted="SavePin" />
+    }
+
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <p class="settings-message">@Message</p>
+    }
+</div>
+
+<div class="settings-section">
+    <h3>Security</h3>
+    <button class="logout-btn" @onclick="Logout">
+        Logout (Lock Journal)
+    </button>
+</div>
+
+<div class="settings-section">
+    <h3>Appearance</h3>
+    <div class="theme-selector">
+        <button class="theme-btn @(ThemeService.CurrentTheme == "light" ? "active" : "")" 
+                @onclick='() => ThemeService.SetTheme("light")'>
+            Light
+        </button>
+        <button class="theme-btn @(ThemeService.CurrentTheme == "dark" ? "active" : "")" 
+                @onclick='() => ThemeService.SetTheme("dark")'>
+            Dark
+        </button>
+    </div>
+    </div>
+</div>
+
+@code {
+    int Step = 1;
+
+    string CurrentPin = "";
+    string NewPin = "";
+    string ConfirmPin = "";
+    string Message = "";
+
+    void VerifyCurrentPin()
+    {
+        if (Auth.CurrentUser == null) return;
+
+        if (Auth.CurrentUser.PinHash != PinService.HashPin(CurrentPin))
+        {
+            Message = "Incorrect PIN";
+            CurrentPin = "";
+            return;
+        }
+
+        Message = "";
+        Step = 2;
+    }
+
+    void NextStep()
+    {
+        Step = 3;
+    }
+
+    async Task SavePin()
+    {
+        if (NewPin != ConfirmPin)
+        {
+            Message = "PINs do not match";
+            NewPin = ConfirmPin = "";
+            Step = 2;
+            return;
+        }
+
+        if (Auth.CurrentUser != null)
+        {
+            var user = Db.Users.Find(Auth.CurrentUser.Id);
+            if (user != null)
+            {
+                user.PinHash = PinService.HashPin(NewPin);
+                await Db.SaveChangesAsync();
+                
+                // Update local session state too
+                Auth.Login(user); 
+
+                Message = "PIN updated successfully";
+                Auth.Logout(); // Force relogin after PIN change for security
+                Nav.NavigateTo("/authentication", true);
+            }
+        }
+    }
+
+    void Logout()
+    {
+        Auth.Lock();
+        Nav.NavigateTo("/authentication", true);
+    }
+}

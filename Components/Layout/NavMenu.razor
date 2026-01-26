@@ -1,0 +1,107 @@
+﻿@inject NavigationManager Nav
+@inject AuthStateService Auth
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">Journal</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+
+        @* 🔐 LOCKED STATE *@
+        @if (!Auth.IsUnlocked)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/authentication">
+                    Login
+                </NavLink>
+            </div>
+        }
+        else
+        {
+            @* 🔓 UNLOCKED STATE *@
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                    Home
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/write">
+                    Write
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/calendar">
+                    Calendar
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/list">
+                    List
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/settings">
+                    Settings
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="export">
+                    Export PDF
+                </NavLink>
+            </div>
+
+
+            <div class="nav-item px-3">
+                <button type="button"
+                        class="nav-link btn btn-link text-start"
+                        @onclick="LockApp">
+                     Lock Journal
+                </button>
+            </div>
+
+            <div class="nav-item px-3">
+                <button type="button"
+                        class="nav-link btn btn-link text-start text-danger"
+                        @onclick="LogOut">
+                     Log Out
+                </button>
+            </div>
+        }
+
+    </nav>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Auth.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Auth.OnChange -= StateHasChanged;
+    }
+
+    private void LockApp()
+    {
+        Auth.Lock();
+        Nav.NavigateTo("/authentication", true);
+    }
+
+    private void LogOut()
+    {
+        Auth.Logout();
+        Nav.NavigateTo("/authentication", true);
+    }
+}

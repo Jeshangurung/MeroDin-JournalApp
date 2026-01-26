@@ -1,0 +1,56 @@
+﻿@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+@inject Journal.Services.ThemeService ThemeService
+@implements IDisposable
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var currentRoute = Nav.Uri.ToLower();
+
+        // 1. Not Logged In? Redirect to Auth (unless registering)
+        if (!Auth.IsAuthenticated && !currentRoute.Contains("/authentication") && !currentRoute.Contains("/register"))
+        {
+            Nav.NavigateTo("/authentication", true);
+        }
+        // 2. Logged In but Locked? Redirect to Auth (PIN pad)
+        else if (Auth.IsAuthenticated && !Auth.IsUnlocked && !currentRoute.Contains("/authentication"))
+        {
+            Nav.NavigateTo("/authentication", true);
+        }
+
+        if (firstRender || true) // Call on every render to ensure consistency
+        {
+            await JS.InvokeVoidAsync("setTheme", ThemeService.CurrentTheme);
+        }
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
+}
+
+@if (Auth.IsUnlocked || Nav.Uri.ToLower().Contains("/authentication") || Nav.Uri.ToLower().Contains("/register"))
+{
+    <div class="page theme-@ThemeService.CurrentTheme">
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+
+        <main>
+            
+
+            <article class="content px-4">
+                @Body
+            </article>
+        </main>
+    </div>
+}

@@ -1,0 +1,84 @@
+﻿@page "/export"
+@inject Journal.Services.IJournalService JournalService
+
+<div class="export-container">
+    <h1 class="page-title">Export Journals</h1>
+    <p class="export-subtitle">Archive your reflections as a PDF document.</p>
+
+    <div class="export-card">
+        <div class="date-inputs">
+            <div class="input-group">
+                <label>From Date</label>
+                <input type="date" @bind="FromDate" class="date-input" />
+            </div>
+            <div class="input-group">
+                <label>To Date</label>
+                <input type="date" @bind="ToDate" class="date-input" />
+            </div>
+        </div>
+
+        <button class="export-btn" @onclick="ExportPdf" disabled="@IsExporting">
+            @if (IsExporting)
+            {
+                <span>Generating PDF...</span>
+            }
+            else
+            {
+                <span>Export to Desktop</span>
+            }
+        </button>
+
+        @if (!string.IsNullOrEmpty(Status))
+        {
+            <div class="status-message @(IsError ? "error" : "success")">
+                @Status
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private DateTime FromDate = DateTime.Today.AddDays(-7);
+    private DateTime ToDate = DateTime.Today;
+    private string Status = "";
+    private bool IsError = false;
+    private bool IsExporting = false;
+
+    private async Task ExportPdf()
+    {
+        try
+        {
+            IsExporting = true;
+            IsError = false;
+            Status = "";
+
+            var pdfBytes = await JournalService.ExportPdfAsync(FromDate, ToDate);
+
+            // Generate unique filename to avoid "process cannot access file" error
+            var timestamp = DateTime.Now.ToString("HHmmss");
+            var filename = $"Journal_{FromDate:yyyyMMdd}_{ToDate:yyyyMMdd}_{timestamp}.pdf";
+            
+            var filePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                filename
+            );
+
+            await File.WriteAllBytesAsync(filePath, pdfBytes);
+            Status = $"Success! Exported to: {filename}";
+        }
+        catch (IOException)
+        {
+            IsError = true;
+            Status = "Error: Please close the previous PDF before exporting again.";
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Status = $"An unexpected error occurred: {ex.Message}";
+        }
+        finally
+        {
+            IsExporting = false;
+        }
+    }
+}

@@ -1,0 +1,47 @@
+﻿<div class="pin-container">
+    <div class="pin-display">
+        @for (int i = 0; i < 4; i++)
+        {
+            <div class="pin-dot @(i < Pin.Length ? "filled" : "")"></div>
+        }
+    </div>
+
+    <div class="pin-pad">
+        @foreach (var n in Numbers)
+        {
+            <button class="pin-btn" @onclick="() => Add(n)">
+                @n
+            </button>
+        }
+
+        <button class="pin-btn" @onclick="() => Add('0')">0</button>
+        <button class="pin-btn delete" @onclick="Delete">⌫</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Pin { get; set; } = "";
+    [Parameter] public EventCallback<string> PinChanged { get; set; }
+    [Parameter] public EventCallback OnCompleted { get; set; }
+
+    private readonly char[] Numbers = { '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+
+    private async Task Add(char digit)
+    {
+        if (Pin.Length >= 4) return;
+
+        Pin += digit;
+        await PinChanged.InvokeAsync(Pin);
+
+        if (Pin.Length == 4)
+            await OnCompleted.InvokeAsync();
+    }
+
+    private async Task Delete()
+    {
+        if (Pin.Length == 0) return;
+
+        Pin = Pin[..^1];
+        await PinChanged.InvokeAsync(Pin);
+    }
+}
