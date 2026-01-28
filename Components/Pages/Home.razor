@@ -63,7 +63,7 @@
                             <span class="mood-label">@mood.Key</span>
                             <div class="mood-bar-container">
                                 <div class="mood-bar"
-                                     style="width:@MoodPercentage(mood.Key)%; background-color: #000000;">
+                                     style="width:@MoodPercentage(mood.Key)%; background-color: @GetMoodColor(mood.Key);">
                                 </div>
                             </div>
                             <span class="mood-percentage">
@@ -178,8 +178,21 @@
 
     private readonly List<string> PieColors = new()
     {
-        "#000000", "#666666", "#999999", "#cccccc", "#444444"
+        "var(--chart-1)",
+        "var(--chart-2)",
+        "var(--chart-3)",
+        "var(--chart-4)",
+        "var(--chart-5)"
     };
+
+    private string GetMoodColor(string mood)
+    {
+        if (mood.Contains("😊") || mood.Contains("🤩") || mood.Contains("Relaxed")) return "var(--chart-1)";
+        if (mood.Contains("🙏") || mood.Contains("Calm")) return "var(--chart-2)";
+        if (mood.Contains("😢") || mood.Contains("Anxious")) return "var(--chart-3)";
+        if (mood.Contains("Stressed") || mood.Contains("Angry")) return "var(--chart-4)";
+        return "var(--text-muted)";
+    }
 
     private string Greeting =>
         DateTime.Now.Hour < 12 ? "Good Morning" :

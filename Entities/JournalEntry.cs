@@ -36,9 +36,10 @@ namespace Journal.Entities
         // Navigation property (many-to-many with Tags)
         public ICollection<JournalTag> JournalTags { get; set; } = new List<JournalTag>();
 
-        // Link to User
         [Required]
         public int UserId { get; set; }
         public User User { get; set; } = null!;
+
+        public bool IsPublic { get; set; }
     }
 }

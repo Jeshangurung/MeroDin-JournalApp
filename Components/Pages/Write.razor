@@ -2,12 +2,11 @@
 @page "/write/{Id:int}"
 @using Journal.Data
 @using Journal.Entities
+@using Microsoft.EntityFrameworkCore
 @implements IDisposable
 @inject Journal.Services.IJournalService JournalService
 @inject IJSRuntime JS
-
 @inject NavigationManager Navigation
-@inject NavigationManager Nav
 @inject AppDbContext Db
 
 <h3>Write</h3>
@@ -74,12 +73,24 @@
                     <h3 class="metadata-title">Category</h3>
                     <select class="category-select" @bind="model.Category">
                         <option value="">Select Category</option>
-                        <option>Personal</option>
-                        <option>Work</option>
-                        <option>Health</option>
-                        <option>Relationships</option>
-                        <option>Personal Growth</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Work">Work</option>
+                        <option value="Health">Health</option>
+                        <option value="Relationships">Relationships</option>
+                        <option value="Personal Growth">Personal Growth</option>
                     </select>
+                </div>
+
+                <!-- Visibility Toggle -->
+                <div class="metadata-card">
+                    <h3 class="metadata-title">Visibility</h3>
+                    <div class="visibility-toggle">
+                        <label class="switch">
+                            <input type="checkbox" @bind="model.IsPublic">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="visibility-label">@(model.IsPublic ? "Public (Visible to everyone)" : "Private (Only for you)")</span>
+                    </div>
                 </div>
 
                 <!-- Actions -->
@@ -142,12 +153,25 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+
         if (Id.HasValue)
         {
             var existing = await JournalService.GetByIdAsync(Id.Value);
             if (existing != null)
             {
                 model = existing;
+            }
+        }
+        else if (query["date"] != null)
+        {
+            var selectedDate = DateTime.Parse(query["date"]!);
+            var entry = await Db.JournalEntries.FirstOrDefaultAsync(e => e.EntryDate.Date == selectedDate.Date);
+            if (entry != null)
+            {
+                Navigation.NavigateTo($"/write/{entry.Id}");
+                return;
             }
         }
         else
@@ -203,7 +227,6 @@
 
     private async Task HandleSubmit()
     {
-        // Final sync just in case
         if (_quillReady)
         {
             model.Content = await JS.InvokeAsync<string>("getQuillHtml");
@@ -216,7 +239,6 @@
 
             if (!IsEdit)
             {
-                // Clear the editor and reset model after a short delay or immediately
                 if (_quillReady)
                 {
                     await JS.InvokeVoidAsync("setQuillHtml", string.Empty);
@@ -225,7 +247,6 @@
                 editContext = new EditContext(model);
             }
 
-            // Optional: Reset Saved status after some time
             await Task.Delay(3000);
             Saved = false;
             StateHasChanged();
@@ -255,34 +276,3 @@
         _objRef?.Dispose();
     }
 }
-
-@code {
-    DateTime SelectedDate = DateTime.Today;
-    string EntryText = "";
-    string SelectedMood = "";
-
-    protected override void OnInitialized()
-    {
-        var uri = new Uri(Nav.Uri);
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-
-        if (query["date"] != null)
-        {
-            SelectedDate = DateTime.Parse(query["date"]!);
-            LoadEntryForDate();
-        }
-    }
-
-    void LoadEntryForDate()
-    {
-        var entry = Db.JournalEntries
-                      .FirstOrDefault(e => e.EntryDate.Date == SelectedDate.Date);
-
-        if (entry != null)
-        {
-            EntryText = entry.Content;
-            SelectedMood = entry.PrimaryMood;
-        }
-    }
-}
-

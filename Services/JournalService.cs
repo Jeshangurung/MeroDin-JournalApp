@@ -55,6 +55,7 @@ namespace Journal.Services
             entry.PrimaryMood = model.PrimaryMood;
             entry.SecondaryMood1 = model.SecondaryMood1;
             entry.SecondaryMood2 = model.SecondaryMood2;
+            entry.IsPublic = model.IsPublic;
             entry.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -98,7 +99,8 @@ namespace Journal.Services
                 SecondaryMood2 = entry.SecondaryMood2,
                 EntryDate = entry.EntryDate,
                 CreatedAt = entry.CreatedAt,
-                UpdatedAt = entry.UpdatedAt
+                UpdatedAt = entry.UpdatedAt,
+                IsPublic = entry.IsPublic
             };
         }
 
@@ -117,6 +119,7 @@ namespace Journal.Services
                 Category = j.Category,
                 PrimaryMood = j.PrimaryMood,
                 ContentPreview = GetPreview(j.Content),
+                IsPublic = j.IsPublic,
                 WordCount = j.Content
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries)
                     .Length
@@ -207,6 +210,30 @@ namespace Journal.Services
             return document.GeneratePdf();
         }
 
+        public async Task<List<JournalEntryDisplayModel>> GetPublicEntriesAsync()
+        {
+            var entries = await _context.JournalEntries
+                .Include(j => j.User)
+                .Where(j => j.IsPublic)
+                .OrderByDescending(j => j.EntryDate)
+                .Take(50)
+                .ToListAsync();
+
+            return entries.Select(j => new JournalEntryDisplayModel
+            {
+                Id = j.Id,
+                EntryDate = j.EntryDate,
+                Category = j.Category,
+                PrimaryMood = j.PrimaryMood,
+                ContentPreview = GetPreview(j.Content),
+                IsPublic = j.IsPublic,
+                Author = j.User?.Username ?? "Anonymous",
+                WordCount = j.Content
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Length
+            }).ToList();
+        }
+
         private string RemoveHtml(string html)
         {
             if (string.IsNullOrEmpty(html)) return "";
@@ -266,6 +293,7 @@ namespace Journal.Services
                     Category = j.Category,
                     PrimaryMood = j.PrimaryMood,
                     ContentPreview = GetPreview(j.Content),
+                    IsPublic = j.IsPublic,
                     WordCount = j.Content
                         .Split(' ', StringSplitOptions.RemoveEmptyEntries)
                         .Length

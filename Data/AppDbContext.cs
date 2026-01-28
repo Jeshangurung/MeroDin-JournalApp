@@ -19,7 +19,7 @@ namespace Journal.Data
         {
             // Cross-platform safe location for SQLite database
             var folder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            _dbPath = Path.Combine(folder, "journal.db");
+            _dbPath = Path.Combine(folder, "journal1.db");
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

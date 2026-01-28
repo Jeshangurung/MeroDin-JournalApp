@@ -4,3 +4,6 @@ obj/
 *.db
 *.log
 .DS_Store
+# Platform-specific (not used)
+Platforms/iOS/
+Platforms/Tizen/

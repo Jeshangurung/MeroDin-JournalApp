@@ -16,5 +16,7 @@ namespace Journal.Models
         public string PrimaryMood { get; set; } = string.Empty;
 
         public int WordCount { get; set; }
+        public bool IsPublic { get; set; }
+        public string Author { get; set; } = string.Empty;
     }
 }

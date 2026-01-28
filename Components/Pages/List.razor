@@ -52,6 +52,9 @@ else
                         @entry.EntryDate.ToString("MMMM dd, yyyy")
                     </span>
                     <span class="entry-mood">@entry.PrimaryMood</span>
+                    <span class="visibility-badge @(entry.IsPublic ? "public" : "private")">
+                        @(entry.IsPublic ? "Public" : "Private")
+                    </span>
                 </div>
 
                 <h2 class="entry-title">@entry.Category</h2>

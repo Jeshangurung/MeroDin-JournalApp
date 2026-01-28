@@ -43,6 +43,16 @@ using Data;
                 
                 // Ensure the database is created if it doesn't exist
                 db.Database.EnsureCreated();
+
+                // Manual Migration: Add IsPublic column if it doesn't exist
+                try
+                {
+                    db.Database.ExecuteSqlRaw("ALTER TABLE JournalEntries ADD COLUMN IsPublic INTEGER NOT NULL DEFAULT 0;");
+                }
+                catch
+                {
+                    // Column likely already exists
+                }
             }
 
             return app;

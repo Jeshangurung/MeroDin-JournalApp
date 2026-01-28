@@ -35,9 +35,15 @@ body.theme-dark,
     --accent-color: var(--white);
     --accent-text: var(--pure-black);
     --nav-text: var(--white);
+
+    /* Chart Colors */
+    --chart-1: #818cf8;
+    --chart-2: #a78bfa;
+    --chart-3: #f472b6;
+    --chart-4: #fb7185;
+    --chart-5: #fbbf24;
 }
 
-/* Default to light if no class is present, or use the variables globally */
 :root {
     --bg-color: var(--white);
     --text-color: var(--pure-black);
@@ -49,6 +55,13 @@ body.theme-dark,
     --accent-color: var(--pure-black);
     --accent-text: var(--white);
     --nav-text: var(--pure-black);
+
+    /* Chart Colors */
+    --chart-1: #6366f1;
+    --chart-2: #8b5cf6;
+    --chart-3: #ec4899;
+    --chart-4: #f43f5e;
+    --chart-5: #f59e0b;
 }
 
 .page,

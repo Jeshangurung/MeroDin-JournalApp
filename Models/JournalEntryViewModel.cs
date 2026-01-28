@@ -23,5 +23,6 @@ namespace Journal.Models
         public DateTime EntryDate { get; set; } = DateTime.Today;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public bool IsPublic { get; set; }
     }
 }

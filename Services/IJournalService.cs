@@ -24,6 +24,7 @@ namespace Journal.Services
             int page,
             int pageSize
         );
+        Task<List<JournalEntryDisplayModel>> GetPublicEntriesAsync();
         Task<byte[]> ExportPdfAsync(DateTime from, DateTime to);
 
 
