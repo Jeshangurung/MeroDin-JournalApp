@@ -3,6 +3,7 @@
 @using Journal.Services
 @inject IJournalService JournalService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <div class="public-container">
     <div class="public-header">
@@ -11,8 +12,19 @@
             <p class="premium-subtitle">Shared reflections from the community</p>
         </div>
         <div class="header-actions">
+            <div class="search-box">
+                <input type="text" 
+                       placeholder="Search reflections..." 
+                       @bind="SearchText" 
+                       @onkeyup="@(e => { if(e.Key == "Enter") PerformSearch(); })" />
+                @if (!string.IsNullOrEmpty(SearchText))
+                {
+                    <button class="clear-btn" @onclick="ClearSearch">×</button>
+                }
+                <button class="search-btn" @onclick="PerformSearch">Search</button>
+            </div>
             <button class="refresh-btn" @onclick="LoadEntries">
-                <i class="refresh-icon"></i> Refresh
+                Refresh
             </button>
         </div>
     </div>
@@ -71,18 +83,46 @@
                 </div>
             }
         </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-container">
+            <button class="pag-btn" disabled="@(CurrentPage <= 1)" @onclick="() => ChangePage(CurrentPage - 1)">
+                Previous
+            </button>
+            
+            <div class="page-indicator">
+                Page <span class="current">@CurrentPage</span> of <span class="total">@TotalPages</span>
+                <span class="total-info">(@TotalEntries entries total)</span>
+            </div>
+
+            <button class="pag-btn" disabled="@(CurrentPage >= TotalPages)" @onclick="() => ChangePage(CurrentPage + 1)">
+                Next
+            </button>
+        </div>
     }
 </div>
 
 @code {
     private List<JournalEntryDisplayModel>? Entries;
     private bool IsLoading = true;
+    
+    // Search State
+    private string SearchText = "";
+    
+    // Pagination State
+    private int CurrentPage = 1;
+    private int PageSize = 6;
+    private int TotalPages = 1;
+    private int TotalEntries = 0;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadEntries();
     }
 
+    /// <summary>
+    /// Fetches public entries from the service based on current pagination state.
+    /// </summary>
     private async Task LoadEntries()
     {
         IsLoading = true;
@@ -90,16 +130,62 @@
         
         try 
         {
-            Entries = await JournalService.GetPublicEntriesAsync();
+            // Call the paged service method with search support
+            var result = await JournalService.GetPublicEntriesPagedAsync(SearchText, CurrentPage, PageSize);
+            
+            Entries = result.Items;
+            TotalEntries = result.TotalCount;
+            TotalPages = (int)Math.Ceiling((double)TotalEntries / PageSize);
+            
+            // Boundary check: if entries deleted/changed and current page is out of bounds
+            if (TotalPages > 0 && CurrentPage > TotalPages)
+            {
+                CurrentPage = TotalPages;
+                await LoadEntries();
+            }
         }
         catch (Exception ex)
         {
-            // Log error
+            // Fail gracefully
             Entries = new();
         }
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Executes search and resets to first page.
+    /// </summary>
+    private async Task PerformSearch()
+    {
+        CurrentPage = 1;
+        await LoadEntries();
+    }
+
+    /// <summary>
+    /// Clears search filter and reloads.
+    /// </summary>
+    private async Task ClearSearch()
+    {
+        SearchText = "";
+        CurrentPage = 1;
+        await LoadEntries();
+    }
+
+    /// <summary>
+    /// Updates the current page and reloads entries.
+    /// </summary>
+    private async Task ChangePage(int newPage)
+    {
+        if (newPage >= 1 && newPage <= TotalPages)
+        {
+            CurrentPage = newPage;
+            await LoadEntries();
+            
+            // Scroll to top of the grid for better UX
+            await JS.InvokeVoidAsync("window.scrollTo", 0, 0);
         }
     }
 }

@@ -243,31 +243,59 @@ namespace Journal.Services
             return document.GeneratePdf();
         }
 
-        public async Task<List<JournalEntryDisplayModel>> GetPublicEntriesAsync()
+        /// <summary>
+        /// Retrieves a paginated and optionally filtered list of public journal entries.
+        /// </summary>
+        /// <param name="searchText">Optional text to filter entries by (checks category and content).</param>
+        /// <param name="page">The current page number (1-indexed).</param>
+        /// <param name="pageSize">The number of items per page.</param>
+        /// <returns>A paged result containing entry display models.</returns>
+        public async Task<PagedResult<JournalEntryDisplayModel>> GetPublicEntriesPagedAsync(string? searchText, int page, int pageSize)
         {
-            var entries = await _context.JournalEntries
+            // Base query for public entries
+            var query = _context.JournalEntries
                 .Include(j => j.User)
                 .Include(j => j.JournalTags)
                 .ThenInclude(jt => jt.Tag)
-                .Where(j => j.IsPublic)
+                .Where(j => j.IsPublic);
+
+            // Apply search filter if provided
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                var search = searchText.ToLower();
+                query = query.Where(j => j.Category.ToLower().Contains(search) || 
+                                       j.Content.ToLower().Contains(search));
+            }
+
+            // Get total count for pagination metadata
+            var totalCount = await query.CountAsync();
+
+            // Fetch paged data
+            var entries = await query
                 .OrderByDescending(j => j.EntryDate)
-                .Take(50)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            return entries.Select(j => new JournalEntryDisplayModel
+            // Map entities to display models
+            return new PagedResult<JournalEntryDisplayModel>
             {
-                Id = j.Id,
-                EntryDate = j.EntryDate,
-                Category = j.Category,
-                PrimaryMood = j.PrimaryMood,
-                ContentPreview = GetPreview(j.Content),
-                IsPublic = j.IsPublic,
-                Author = j.User?.Username ?? "Anonymous",
-                WordCount = j.Content
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Length,
-                Tags = j.JournalTags.Select(jt => jt.Tag.Name).ToList()
-            }).ToList();
+                Items = entries.Select(j => new JournalEntryDisplayModel
+                {
+                    Id = j.Id,
+                    EntryDate = j.EntryDate,
+                    Category = j.Category,
+                    PrimaryMood = j.PrimaryMood,
+                    ContentPreview = GetPreview(j.Content),
+                    IsPublic = j.IsPublic,
+                    Author = j.User?.Username ?? "Anonymous",
+                    WordCount = j.Content.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length,
+                    Tags = j.JournalTags.Select(jt => jt.Tag.Name).ToList()
+                }).ToList(),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         private string RemoveHtml(string html)
