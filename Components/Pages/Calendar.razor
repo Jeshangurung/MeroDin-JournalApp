@@ -1,11 +1,14 @@
 ﻿@page "/calendar"
 @using Journal.Data
 @using Journal.Entities
+@using Microsoft.EntityFrameworkCore
 
 
 
 @inject AppDbContext Db
 @inject NavigationManager Nav
+@inject AuthStateService Auth
+@inject Journal.Services.IJournalService JournalService
 
 <h3>Calendar</h3>
 
@@ -72,39 +75,48 @@
 
     List<CalendarDay> CalendarDays = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadCalendar();
+        await LoadCalendar();
     }
 
-    void PrevMonth()
+    async Task PrevMonth()
     {
         CurrentMonth = CurrentMonth.AddMonths(-1);
-        LoadCalendar();
+        await LoadCalendar();
     }
 
-    void NextMonth()
+    async Task NextMonth()
     {
         CurrentMonth = CurrentMonth.AddMonths(1);
-        LoadCalendar();
+        await LoadCalendar();
     }
 
-    void GoToToday()
+    async Task GoToToday()
     {
         CurrentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-        LoadCalendar();
+        await LoadCalendar();
     }
 
-    void LoadCalendar()
+    /// <summary>
+    /// Loads entries for the currently selected month and populates the calendar grid.
+    /// Filters entries by the currently authenticated user for data isolation.
+    /// </summary>
+    private async Task LoadCalendar()
     {
+        if (Auth.CurrentUser == null) return;
+
         CalendarDays.Clear();
 
         var firstDay = CurrentMonth;
         var startDay = firstDay.AddDays(-(int)firstDay.DayOfWeek);
-        var entries = Db.JournalEntries
-                        .Where(e => e.EntryDate.Month == CurrentMonth.Month &&
-                                    e.EntryDate.Year == CurrentMonth.Year)
-                        .ToList();
+
+        // Fetch user entries for the selected month
+        var entries = await Db.JournalEntries
+            .Where(e => e.UserId == Auth.CurrentUser.Id &&
+                        e.EntryDate.Month == CurrentMonth.Month &&
+                        e.EntryDate.Year == CurrentMonth.Year)
+            .ToListAsync();
 
         for (int i = 0; i < 42; i++)
         {
@@ -119,30 +131,52 @@
                 MoodEmoji = entry != null ? GetMoodEmoji(entry.PrimaryMood) : ""
             });
         }
+        
+        StateHasChanged();
     }
 
-    void OpenEntry(CalendarDay day)
+    /// <summary>
+    /// Navigates to the editor for the selected day.
+    /// Redirects to existing entry if available, or creates a new entry context.
+    /// </summary>
+    private void OpenEntry(CalendarDay day)
     {
-        if (!day.HasEntry) return;
+        try
+        {
+            if (!day.HasEntry) return;
 
-        Nav.NavigateTo($"/write?date={day.Date:yyyy-MM-dd}");
+            // Navigate to the write page with the specific date context
+            Nav.NavigateTo($"/write?date={day.Date:yyyy-MM-dd}");
+        }
+        catch (Exception)
+        {
+            // Log navigation error if necessary
+        }
     }
 
-    string GetMoodEmoji(string mood) => mood switch
+    /// <summary>
+    /// Maps the stored primary mood string to its corresponding emoji for visual display.
+    /// Handles cases where the stored string might contain the emoji prefix.
+    /// </summary>
+    private string GetMoodEmoji(string mood)
     {
-        "Happy" => "😊",
-        "Excited" => "🤩",
-        "Relaxed" => "😌",
-        "Grateful" => "🙏",
-        "Confident" => "⭐",
-        "Calm" => "😐",
-        "Thoughtful" => "🤔",
-        "Sad" => "😢",
-        "Angry" => "😠",
-        "Stressed" => "😰",
-        "Anxious" => "😟",
-        _ => "📝"
-    };
+        if (string.IsNullOrEmpty(mood)) return "📝";
+
+        // Check for specific icons within the stored string
+        if (mood.Contains("😊") || mood.Contains("Happy")) return "😊";
+        if (mood.Contains("🤩") || mood.Contains("Excited")) return "🤩";
+        if (mood.Contains("😌") || mood.Contains("Relaxed")) return "😌";
+        if (mood.Contains("🙏") || mood.Contains("Grateful")) return "🙏";
+        if (mood.Contains("⭐") || mood.Contains("Confident")) return "⭐";
+        if (mood.Contains("😐") || mood.Contains("Calm")) return "😐";
+        if (mood.Contains("🤔") || mood.Contains("Thoughtful")) return "🤔";
+        if (mood.Contains("😢") || mood.Contains("Sad")) return "😢";
+        if (mood.Contains("😠") || mood.Contains("Angry")) return "😠";
+        if (mood.Contains("😰") || mood.Contains("Stressed")) return "😰";
+        if (mood.Contains("😟") || mood.Contains("Anxious")) return "😟";
+        
+        return "📝";
+    }
 
     class CalendarDay
     {

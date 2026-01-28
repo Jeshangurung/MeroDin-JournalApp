@@ -128,7 +128,10 @@ namespace Journal.Services
                 CreatedAt = entry.CreatedAt,
                 UpdatedAt = entry.UpdatedAt,
                 IsPublic = entry.IsPublic,
-                SelectedTags = entry.JournalTags.Select(jt => jt.Tag.Name).ToList()
+                SelectedTags = entry.JournalTags
+                    .Where(jt => jt.Tag != null)
+                    .Select(jt => jt.Tag.Name)
+                    .ToList()
             };
         }
 

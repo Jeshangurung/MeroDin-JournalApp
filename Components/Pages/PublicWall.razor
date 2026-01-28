@@ -16,7 +16,7 @@
                 <input type="text" 
                        placeholder="Search reflections..." 
                        @bind="SearchText" 
-                       @onkeyup="@(e => { if(e.Key == "Enter") PerformSearch(); })" />
+                       @onkeyup="@(async e => { if(e.Key == "Enter") await PerformSearch(); })" />
                 @if (!string.IsNullOrEmpty(SearchText))
                 {
                     <button class="clear-btn" @onclick="ClearSearch">×</button>
@@ -144,7 +144,7 @@
                 await LoadEntries();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Fail gracefully
             Entries = new();

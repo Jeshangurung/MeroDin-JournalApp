@@ -8,12 +8,20 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject AppDbContext Db
+@inject AuthStateService Auth
 
-<h3>Write</h3>
-
-<EditForm EditContext="editContext" OnSubmit="HandleSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+@if (editContext == null)
+{
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Initializing editor...</p>
+    </div>
+}
+else
+{
+    <EditForm EditContext="editContext" OnSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
     <main class="editor-container">
         <div class="editor-wrapper">
@@ -194,7 +202,8 @@
             </div>
         </div>
     </main>
-</EditForm>
+    </EditForm>
+}
 
 @code {
     [Parameter] public int? Id { get; set; }
@@ -227,55 +236,107 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // One-time initialization of the JS helper reference
+        _objRef = DotNetObjectReference.Create(this);
+    }
+
+    /// <summary>
+    /// Handles data loading whenever parameters (like Id) or the URL change.
+    /// This is safer for redirects and same-component navigation.
+    /// </summary>
+    protected override async Task OnParametersSetAsync()
+    {
         var uri = new Uri(Navigation.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 
+        // Reset state for new load
+        _quillReady = false; 
+        StateHasChanged();
+
         if (Id.HasValue)
         {
+            // Load specific entry by ID
             var existing = await JournalService.GetByIdAsync(Id.Value);
             if (existing != null)
             {
                 model = existing;
-                var predefined = new[] { "Personal", "Work", "Health", "Relationships", "Personal Growth" };
-                if (!string.IsNullOrEmpty(model.Category) && !predefined.Contains(model.Category))
-                {
-                    CustomCategoryName = model.Category;
-                    model.Category = "Other";
-                }
+                HandleCustomCategoryMapping();
             }
         }
         else if (query["date"] != null)
         {
-            var selectedDate = DateTime.Parse(query["date"]!);
-            var entry = await Db.JournalEntries.FirstOrDefaultAsync(e => e.EntryDate.Date == selectedDate.Date);
-            if (entry != null)
+            try 
             {
-                Navigation.NavigateTo($"/write/{entry.Id}");
-                return;
+                if (DateTime.TryParse(query["date"], out DateTime selectedDate))
+                {
+                    var currentUserId = Auth.CurrentUser?.Id ?? 0;
+                    var entry = await Db.JournalEntries
+                        .FirstOrDefaultAsync(e => e.EntryDate.Date == selectedDate.Date && e.UserId == currentUserId);
+
+                    if (entry != null)
+                    {
+                        // Redirect if an entry for this date already exists
+                        Navigation.NavigateTo($"/write/{entry.Id}");
+                        return;
+                    }
+                    
+                    // Create new entry for the selected date
+                    model = new Journal.Models.JournalEntryViewModel { EntryDate = selectedDate };
+                }
+            }
+            catch (Exception)
+            {
+                // Graceful fallback for invalid date strings
+                model = new();
             }
         }
         else
         {
+            // Load or initialize "Today" entry
             var existing = await JournalService.GetTodayAsync();
             if (existing != null)
             {
                 model = existing;
-                var predefined = new[] { "Personal", "Work", "Health", "Relationships", "Personal Growth" };
-                if (!string.IsNullOrEmpty(model.Category) && !predefined.Contains(model.Category))
-                {
-                    CustomCategoryName = model.Category;
-                    model.Category = "Other";
-                }
+                HandleCustomCategoryMapping();
+            }
+            else 
+            {
+                model = new();
             }
         }
+
+        // Initialize edit context once data is ready
         editContext = new EditContext(model);
+        
+        // If we are already rendered, we need to manually update Quill content
+        if (Id.HasValue || query["date"] != null || true)
+        {
+            // Note: AfterRender handles the first set
+            if (_quillReady)
+            {
+                await JS.InvokeVoidAsync("setQuillHtml", model.Content ?? string.Empty);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles mapping of "Other" category to the custom category text field.
+    /// </summary>
+    private void HandleCustomCategoryMapping()
+    {
+        var predefined = new[] { "Personal", "Work", "Health", "Relationships", "Personal Growth" };
+        if (!string.IsNullOrEmpty(model.Category) && !predefined.Contains(model.Category))
+        {
+            CustomCategoryName = model.Category;
+            model.Category = "Other";
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && editContext != null)
         {
-            _objRef = DotNetObjectReference.Create(this);
+            // Initialize the Quill editor only after the container div is rendered
             await JS.InvokeVoidAsync("initQuill", EditorId, _objRef);
             _quillReady = true;
             await JS.InvokeVoidAsync("setQuillHtml", model.Content ?? string.Empty);
