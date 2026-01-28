@@ -1,0 +1,249 @@
+.public-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.public-header {
+    border-bottom: 2px solid var(--pure-black);
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+}
+
+.premium-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--pure-black);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+}
+
+.premium-subtitle {
+    font-size: 1rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+}
+
+.header-actions {
+    margin-top: 1rem;
+}
+
+.refresh-btn {
+    background: var(--pure-black);
+    color: var(--white);
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+    background: #333;
+}
+
+.entries-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.entry-card {
+    background: var(--white);
+    border: 1px solid #e5e5e5;
+    padding: 1.5rem;
+    transition: border-color 0.2s ease;
+}
+
+.entry-card:hover {
+    border-color: var(--pure-black);
+}
+
+.entry-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.author-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.author-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--pure-black);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.author-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.author-name {
+    font-weight: 700;
+    color: var(--pure-black);
+    font-size: 0.95rem;
+}
+
+.entry-date {
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+
+.mood-badge {
+    background: #f0f0f0;
+    color: var(--pure-black);
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 1px solid #ddd;
+}
+
+.entry-card-body {
+    margin-bottom: 1.25rem;
+}
+
+.entry-preview {
+    color: #333;
+    line-height: 1.6;
+    font-size: 1.05rem;
+    margin: 0;
+}
+
+.entry-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.tag {
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #666;
+}
+
+/* Dark theme tags */
+.theme-dark .tag {
+    background: #222;
+    border-color: #333;
+    color: #999;
+}
+
+.entry-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.category-tag {
+    font-size: 0.8rem;
+    color: var(--pure-black);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.word-count {
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+
+.loading-state,
+.empty-state {
+    padding: 4rem 0;
+    text-align: center;
+}
+
+.spinner {
+    width: 30px;
+    height: 30px;
+    border: 2px solid #eee;
+    border-top-color: var(--pure-black);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.action-btn {
+    margin-top: 1rem;
+    background: var(--pure-black);
+    color: var(--white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Dark Theme Overrides */
+.theme-dark .premium-title {
+    color: var(--white);
+}
+
+.theme-dark .public-header {
+    border-color: var(--white);
+}
+
+.theme-dark .entry-card {
+    background: #111;
+    border-color: #333;
+}
+
+.theme-dark .entry-card:hover {
+    border-color: var(--white);
+}
+
+.theme-dark .author-name {
+    color: var(--white);
+}
+
+.theme-dark .author-avatar {
+    background: var(--white);
+    color: var(--pure-black);
+}
+
+.theme-dark .mood-badge {
+    background: #222;
+    color: var(--white);
+    border-color: #444;
+}
+
+.theme-dark .entry-preview {
+    color: #ccc;
+}
+
+.theme-dark .category-tag {
+    color: var(--white);
+}
+
+.theme-dark .refresh-btn,
+.theme-dark .action-btn {
+    background: var(--white);
+    color: var(--pure-black);
+}

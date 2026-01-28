@@ -21,10 +21,12 @@ namespace Journal.Services
             DateTime? fromDate,
             DateTime? toDate,
             string? mood,
+            string? tag,
             int page,
             int pageSize
         );
         Task<List<JournalEntryDisplayModel>> GetPublicEntriesAsync();
+        Task<List<string>> GetAllTagsAsync();
         Task<byte[]> ExportPdfAsync(DateTime from, DateTime to);
 
 

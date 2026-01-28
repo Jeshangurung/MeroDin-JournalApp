@@ -98,3 +98,76 @@
     color: white;
     border-color: #ef4444;
 }
+
+/* ===== Account Form ===== */
+.account-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 450px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-control {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.save-account-btn {
+    background: var(--accent-color);
+    color: var(--accent-text);
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.save-account-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.account-message {
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+}
+
+.account-message.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.account-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}

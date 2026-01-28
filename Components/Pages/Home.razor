@@ -51,32 +51,42 @@
             <div class="chart-card">
                 <h3 class="card-title">Mood Distribution</h3>
 
-                @if (!MoodCounts.Any())
-                {
-                    <p>No mood data yet.</p>
-                }
-                else
-                {
-                    @foreach (var mood in MoodCounts.OrderByDescending(x => x.Value))
-                    {
-                        <div class="mood-bar-item">
-                            <span class="mood-label">@mood.Key</span>
-                            <div class="mood-bar-container">
-                                <div class="mood-bar"
-                                     style="width:@MoodPercentage(mood.Key)%; background-color: @GetMoodColor(mood.Key);">
-                                </div>
-                            </div>
-                            <span class="mood-percentage">
-                                @MoodPercentage(mood.Key).ToString("0")%
-                            </span>
+                <div class="mood-category-bars">
+                    <div class="mood-bar-item">
+                        <span class="mood-label">Positive</span>
+                        <div class="mood-bar-container">
+                            <div class="mood-bar positive" style="width: @CategoryPercentage(PositiveCount)%"></div>
                         </div>
-                    }
+                        <span class="mood-percentage">@CategoryPercentage(PositiveCount).ToString("0")%</span>
+                    </div>
+                    <div class="mood-bar-item">
+                        <span class="mood-label">Neutral</span>
+                        <div class="mood-bar-container">
+                            <div class="mood-bar neutral" style="width: @CategoryPercentage(NeutralCount)%"></div>
+                        </div>
+                        <span class="mood-percentage">@CategoryPercentage(NeutralCount).ToString("0")%</span>
+                    </div>
+                    <div class="mood-bar-item">
+                        <span class="mood-label">Negative</span>
+                        <div class="mood-bar-container">
+                            <div class="mood-bar negative" style="width: @CategoryPercentage(NegativeCount)%"></div>
+                        </div>
+                        <span class="mood-percentage">@CategoryPercentage(NegativeCount).ToString("0")%</span>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(MostFrequentMood))
+                {
+                    <div class="frequent-mood-info">
+                        <span class="info-label">Most Frequent Mood:</span>
+                        <span class="info-value">@MostFrequentMood</span>
+                    </div>
                 }
             </div>
 
-            <!-- CATEGORY PIE -->
+            <!-- CATEGORY PIE (Tag Breakdown) -->
             <div class="chart-card">
-                <h3 class="card-title">Most Used Categories</h3>
+                <h3 class="card-title">Category Breakdown</h3>
 
                 @if (!CategoryStats.Any())
                 {
@@ -120,6 +130,28 @@
                                 </div>
                             }
                         </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="analytics-row">
+            <!-- MOST USED TAGS -->
+            <div class="chart-card full-width">
+                <h3 class="card-title">Most Frequent Tags</h3>
+                @if (!TagCounts.Any())
+                {
+                    <p>No tags used yet.</p>
+                }
+                else
+                {
+                    <div class="tag-cloud">
+                        @foreach (var tag in TagCounts.OrderByDescending(x => x.Value).Take(15))
+                        {
+                            <span class="cloud-tag" style="font-size: @(0.8 + (tag.Value * 0.2))rem; opacity: @(0.4 + (tag.Value * 0.1 > 0.6 ? 0.6 : tag.Value * 0.1));">
+                                #@tag.Key <span class="tag-count">(@tag.Value)</span>
+                            </span>
+                        }
                     </div>
                 }
             </div>
@@ -172,7 +204,17 @@
     private int Streak;
     private int LongestStreak;
 
+    private int PositiveCount;
+    private int NeutralCount;
+    private int NegativeCount;
+    private string MostFrequentMood = "";
+
+    private readonly string[] PositiveMoods = { "😊 Happy", "🤩 Excited", "😌 Relaxed", "🙏 Grateful", "💪 Confident" };
+    private readonly string[] NeutralMoods = { "😐 Calm", "💭 Thoughtful", "🧐 Curious", "🌅 Nostalgic", "😑 Bored" };
+    private readonly string[] NegativeMoods = { "😢 Sad", "😠 Angry", "😰 Stressed", "😔 Lonely", "😟 Anxious" };
+
     private Dictionary<string, int> MoodCounts = new();
+    private Dictionary<string, int> TagCounts = new();
 
     private List<CategoryPieItem> CategoryStats = new();
 
@@ -184,15 +226,6 @@
         "var(--chart-4)",
         "var(--chart-5)"
     };
-
-    private string GetMoodColor(string mood)
-    {
-        if (mood.Contains("😊") || mood.Contains("🤩") || mood.Contains("Relaxed")) return "var(--chart-1)";
-        if (mood.Contains("🙏") || mood.Contains("Calm")) return "var(--chart-2)";
-        if (mood.Contains("😢") || mood.Contains("Anxious")) return "var(--chart-3)";
-        if (mood.Contains("Stressed") || mood.Contains("Angry")) return "var(--chart-4)";
-        return "var(--text-muted)";
-    }
 
     private string Greeting =>
         DateTime.Now.Hour < 12 ? "Good Morning" :
@@ -211,24 +244,39 @@
 
         CalculateMoodDistribution();
         CalculateCategoryPie();
+        CalculateTagStats();
         CalculateStreaks();
     }
 
     private void CalculateMoodDistribution()
     {
-        MoodCounts = AllEntries
-            .GroupBy(e => string.IsNullOrWhiteSpace(e.PrimaryMood)
-                ? "Neutral"
-                : e.PrimaryMood)
-            .ToDictionary(g => g.Key, g => g.Count());
+        PositiveCount = 0;
+        NeutralCount = 0;
+        NegativeCount = 0;
+        MoodCounts.Clear();
+
+        foreach (var entry in AllEntries)
+        {
+            var mood = entry.PrimaryMood;
+            if (string.IsNullOrWhiteSpace(mood)) continue;
+
+            // Update Counts for Most Frequent
+            if (!MoodCounts.ContainsKey(mood)) MoodCounts[mood] = 0;
+            MoodCounts[mood]++;
+
+            // Update Categories
+            if (PositiveMoods.Contains(mood)) PositiveCount++;
+            else if (NeutralMoods.Contains(mood)) NeutralCount++;
+            else if (NegativeMoods.Contains(mood)) NegativeCount++;
+        }
+
+        MostFrequentMood = MoodCounts.OrderByDescending(x => x.Value).FirstOrDefault().Key ?? "N/A";
     }
 
-    private double MoodPercentage(string mood)
+    private double CategoryPercentage(int count)
     {
-        if (!MoodCounts.ContainsKey(mood) || TotalEntries == 0)
-            return 0;
-
-        return (double)MoodCounts[mood] / TotalEntries * 100;
+        if (TotalEntries == 0) return 0;
+        return (double)count / TotalEntries * 100;
     }
 
     private void CalculateCategoryPie()
@@ -246,8 +294,15 @@
                     (double)g.Count() / TotalEntries * 100, 1)
             })
             .OrderByDescending(c => c.Percentage)
-            .Take(5)
             .ToList();
+    }
+
+    private void CalculateTagStats()
+    {
+        TagCounts = AllEntries
+            .SelectMany(e => e.Tags)
+            .GroupBy(t => t)
+            .ToDictionary(g => g.Key, g => g.Count());
     }
 
     private void CalculateStreaks()

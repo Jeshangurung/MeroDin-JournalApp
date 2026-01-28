@@ -36,6 +36,8 @@ namespace Journal.Services
             {
                 var today = DateTime.Today;
                 entry = await _context.JournalEntries
+                    .Include(j => j.JournalTags)
+                    .ThenInclude(jt => jt.Tag)
                     .FirstOrDefaultAsync(j => j.EntryDate == today && j.UserId == CurrentUserId);
             }
 
@@ -59,6 +61,27 @@ namespace Journal.Services
             entry.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
+
+            // ===== Tag Handling =====
+            var existingTags = _context.JournalTags.Where(jt => jt.JournalEntryId == entry.Id);
+            _context.JournalTags.RemoveRange(existingTags);
+
+            if (model.SelectedTags.Any())
+            {
+                foreach (var name in model.SelectedTags)
+                {
+                    var tag = await _context.Tags.FirstOrDefaultAsync(t => t.Name.ToLower() == name.ToLower());
+                    if (tag == null)
+                    {
+                        tag = new Tag { Name = name };
+                        _context.Tags.Add(tag);
+                        await _context.SaveChangesAsync();
+                    }
+                    _context.JournalTags.Add(new JournalTag { JournalEntryId = entry.Id, TagId = tag.Id });
+                }
+            }
+
+            await _context.SaveChangesAsync();
             return true;
         }
 
@@ -73,6 +96,8 @@ namespace Journal.Services
         {
             var today = DateTime.Today;
             var entry = await _context.JournalEntries
+                .Include(j => j.JournalTags)
+                .ThenInclude(jt => jt.Tag)
                 .FirstOrDefaultAsync(j => j.EntryDate == today && j.UserId == CurrentUserId);
 
             return MapToViewModel(entry);
@@ -81,6 +106,8 @@ namespace Journal.Services
         public async Task<JournalEntryViewModel?> GetByIdAsync(int id)
         {
             var entry = await _context.JournalEntries
+                .Include(j => j.JournalTags)
+                .ThenInclude(jt => jt.Tag)
                 .FirstOrDefaultAsync(j => j.Id == id && j.UserId == CurrentUserId);
             return MapToViewModel(entry);
         }
@@ -100,7 +127,8 @@ namespace Journal.Services
                 EntryDate = entry.EntryDate,
                 CreatedAt = entry.CreatedAt,
                 UpdatedAt = entry.UpdatedAt,
-                IsPublic = entry.IsPublic
+                IsPublic = entry.IsPublic,
+                SelectedTags = entry.JournalTags.Select(jt => jt.Tag.Name).ToList()
             };
         }
 
@@ -109,6 +137,8 @@ namespace Journal.Services
         {
             var entries = await _context.JournalEntries
                 .Where(j => j.UserId == CurrentUserId)
+                .Include(j => j.JournalTags)
+                .ThenInclude(jt => jt.Tag)
                 .OrderByDescending(j => j.EntryDate)
                 .ToListAsync();
 
@@ -122,7 +152,8 @@ namespace Journal.Services
                 IsPublic = j.IsPublic,
                 WordCount = j.Content
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Length
+                    .Length,
+                Tags = j.JournalTags.Select(jt => jt.Tag.Name).ToList()
             }).ToList();
         }
 
@@ -150,6 +181,8 @@ namespace Journal.Services
             var today = DateTime.Today;
 
             var entry = await _context.JournalEntries
+                .Include(j => j.JournalTags) // Added Include as per instruction
+                .ThenInclude(jt => jt.Tag)    // Added ThenInclude as per instruction
                 .FirstOrDefaultAsync(j => j.EntryDate == today && j.UserId == CurrentUserId);
 
             if (entry == null)
@@ -214,6 +247,8 @@ namespace Journal.Services
         {
             var entries = await _context.JournalEntries
                 .Include(j => j.User)
+                .Include(j => j.JournalTags)
+                .ThenInclude(jt => jt.Tag)
                 .Where(j => j.IsPublic)
                 .OrderByDescending(j => j.EntryDate)
                 .Take(50)
@@ -230,7 +265,8 @@ namespace Journal.Services
                 Author = j.User?.Username ?? "Anonymous",
                 WordCount = j.Content
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Length
+                    .Length,
+                Tags = j.JournalTags.Select(jt => jt.Tag.Name).ToList()
             }).ToList();
         }
 
@@ -247,19 +283,24 @@ namespace Journal.Services
     DateTime? fromDate,
     DateTime? toDate,
     string? mood,
+    string? tag,
     int page,
     int pageSize)
         {
             var query = _context.JournalEntries
+                .Include(j => j.JournalTags)
+                .ThenInclude(jt => jt.Tag)
                 .Where(j => j.UserId == CurrentUserId)
                 .AsQueryable();
 
             // 🔍 Search by content OR category
             if (!string.IsNullOrWhiteSpace(searchText))
             {
+                var term = searchText.ToLower();
                 query = query.Where(j => 
-                    j.Content.Contains(searchText) || 
-                    j.Category.Contains(searchText));
+                    j.Content.ToLower().Contains(term) || 
+                    j.Category.ToLower().Contains(term) ||
+                    j.JournalTags.Any(jt => jt.Tag.Name.ToLower().Contains(term)));
             }
 
             // 📅 Date range filter
@@ -275,6 +316,13 @@ namespace Journal.Services
                     j.PrimaryMood == mood ||
                     j.SecondaryMood1 == mood ||
                     j.SecondaryMood2 == mood);
+
+            // 🏷️ Tag filter (NEW dedicated field)
+            if (!string.IsNullOrWhiteSpace(tag))
+            {
+                var tagTerm = tag.ToLower();
+                query = query.Where(j => j.JournalTags.Any(jt => jt.Tag.Name.ToLower().Contains(tagTerm)));
+            }
 
             var totalCount = await query.CountAsync();
 
@@ -296,13 +344,24 @@ namespace Journal.Services
                     IsPublic = j.IsPublic,
                     WordCount = j.Content
                         .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                        .Length
+                        .Length,
+                    Tags = j.JournalTags.Select(jt => jt.Tag.Name).ToList()
                 }).ToList(),
 
                 TotalCount = totalCount,
                 Page = page,
                 PageSize = pageSize
             };
+        }
+
+        public async Task<List<string>> GetAllTagsAsync()
+        {
+            return await _context.JournalTags
+                .Where(jt => jt.JournalEntry.UserId == CurrentUserId)
+                .Select(jt => jt.Tag.Name)
+                .Distinct()
+                .OrderBy(name => name)
+                .ToListAsync();
         }
 
     }

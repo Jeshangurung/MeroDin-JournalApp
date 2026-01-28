@@ -41,30 +41,64 @@
                 <!-- Primary Mood -->
                 <div class="metadata-card">
                     <h3 class="metadata-title">Primary Mood</h3>
-                    <div class="mood-grid">
-                        @foreach (var mood in PrimaryMoods)
-                        {
-                            <button type="button"
-                                    class="mood-item @(model.PrimaryMood == mood ? "selected" : "")"
-                                    @onclick="() => model.PrimaryMood = mood">
-                                @mood
-                            </button>
-                        }
+                    <div class="mood-category-group">
+                        <h4 class="mood-category-title">Positive</h4>
+                        <div class="mood-grid">
+                            @foreach (var mood in PositiveMoods)
+                            {
+                                <button type="button" class="mood-item @(model.PrimaryMood == mood ? "selected" : "")" @onclick="() => model.PrimaryMood = mood">@mood</button>
+                            }
+                        </div>
+                    </div>
+                    <div class="mood-category-group">
+                        <h4 class="mood-category-title">Neutral</h4>
+                        <div class="mood-grid">
+                            @foreach (var mood in NeutralMoods)
+                            {
+                                <button type="button" class="mood-item @(model.PrimaryMood == mood ? "selected" : "")" @onclick="() => model.PrimaryMood = mood">@mood</button>
+                            }
+                        </div>
+                    </div>
+                    <div class="mood-category-group">
+                        <h4 class="mood-category-title">Negative</h4>
+                        <div class="mood-grid">
+                            @foreach (var mood in NegativeMoods)
+                            {
+                                <button type="button" class="mood-item @(model.PrimaryMood == mood ? "selected" : "")" @onclick="() => model.PrimaryMood = mood">@mood</button>
+                            }
+                        </div>
                     </div>
                 </div>
 
                 <!-- Secondary Moods -->
                 <div class="metadata-card">
                     <h3 class="metadata-title">Secondary Moods (Optional)</h3>
-                    <div class="mood-grid secondary">
-                        @foreach (var mood in SecondaryMoods)
-                        {
-                            <button type="button"
-                                    class="mood-item small @(IsSecondarySelected(mood) ? "selected" : "")"
-                                    @onclick="() => ToggleSecondaryMood(mood)">
-                                @mood
-                            </button>
-                        }
+                    <div class="mood-category-group">
+                        <h4 class="mood-category-title">Positive</h4>
+                        <div class="mood-grid secondary">
+                            @foreach (var mood in PositiveMoods)
+                            {
+                                <button type="button" class="mood-item small @(IsSecondarySelected(mood) ? "selected" : "")" @onclick="() => ToggleSecondaryMood(mood)">@mood</button>
+                            }
+                        </div>
+                    </div>
+                    <div class="mood-category-group">
+                        <h4 class="mood-category-title">Neutral</h4>
+                        <div class="mood-grid secondary">
+                            @foreach (var mood in NeutralMoods)
+                            {
+                                <button type="button" class="mood-item small @(IsSecondarySelected(mood) ? "selected" : "")" @onclick="() => ToggleSecondaryMood(mood)">@mood</button>
+                            }
+                        </div>
+                    </div>
+                    <div class="mood-category-group">
+                        <h4 class="mood-category-title">Negative</h4>
+                        <div class="mood-grid secondary">
+                            @foreach (var mood in NegativeMoods)
+                            {
+                                <button type="button" class="mood-item small @(IsSecondarySelected(mood) ? "selected" : "")" @onclick="() => ToggleSecondaryMood(mood)">@mood</button>
+                            }
+                        </div>
                     </div>
                 </div>
 
@@ -78,7 +112,15 @@
                         <option value="Health">Health</option>
                         <option value="Relationships">Relationships</option>
                         <option value="Personal Growth">Personal Growth</option>
+                        <option value="Other">Other...</option>
                     </select>
+
+                    @if (model.Category == "Other")
+                    {
+                        <div class="custom-category-input">
+                            <input type="text" @bind="CustomCategoryName" placeholder="Enter custom category..." class="tag-input" />
+                        </div>
+                    }
                 </div>
 
                 <!-- Visibility Toggle -->
@@ -90,6 +132,33 @@
                             <span class="slider round"></span>
                         </label>
                         <span class="visibility-label">@(model.IsPublic ? "Public (Visible to everyone)" : "Private (Only for you)")</span>
+                    </div>
+                </div>
+
+                <!-- Tags Section -->
+                <div class="metadata-card">
+                    <h3 class="metadata-title">Tags (Optional)</h3>
+                    
+                    <div class="custom-tag-input">
+                        <input type="text" @bind="CustomTagName" placeholder="Add custom tag..." @onkeyup="HandleTagKeyUp" />
+                        <button type="button" class="add-tag-btn" @onclick="AddCustomTag">+</button>
+                    </div>
+
+                    <div class="tags-grid">
+                        @foreach (var tag in AllPrebuiltTags)
+                        {
+                            <button type="button" 
+                                    class="tag-item @(model.SelectedTags.Contains(tag) ? "selected" : "")"
+                                    @onclick="() => ToggleTag(tag)">
+                                @tag
+                            </button>
+                        }
+                        @foreach (var tag in model.SelectedTags.Where(t => !AllPrebuiltTags.Contains(t)))
+                        {
+                            <button type="button" class="tag-item selected" @onclick="() => ToggleTag(tag)">
+                                @tag <span class="remove-tag">×</span>
+                            </button>
+                        }
                     </div>
                 </div>
 
@@ -137,19 +206,24 @@
     private bool IsEdit => Id.HasValue;
     private DotNetObjectReference<Write>? _objRef;
 
-    private readonly string[] PrimaryMoods =
+    private readonly string[] PositiveMoods = { "😊 Happy", "🤩 Excited", "😌 Relaxed", "🙏 Grateful", "💪 Confident" };
+    private readonly string[] NeutralMoods = { "😐 Calm", "💭 Thoughtful", "🧐 Curious", "🌅 Nostalgic", "😑 Bored" };
+    private readonly string[] NegativeMoods = { "😢 Sad", "😠 Angry", "😰 Stressed", "😔 Lonely", "😟 Anxious" };
+
+    // Helper to get all moods for certain logic if needed
+    private IEnumerable<string> AllMoodOptions => PositiveMoods.Concat(NeutralMoods).Concat(NegativeMoods);
+
+    private readonly string[] AllPrebuiltTags = 
     {
-        "😊 Happy", "🤩 Excited", "😌 Relaxed",
-        "🙏 Grateful", "😐 Calm", "😢 Sad",
-        "😰 Stressed", "😟 Anxious"
+        "Work", "Career", "Studies", "Family", "Friends", "Relationships",
+        "Health", "Fitness", "Personal Growth", "Self-care", "Hobbies", "Travel", "Nature",
+        "Finance", "Spirituality", "Birthday", "Holiday", "Vacation", "Celebration", "Exercise",
+        "Reading", "Writing", "Cooking", "Meditation", "Yoga", "Music", "Shopping", "Parenting",
+        "Projects", "Planning", "Reflection"
     };
 
-    private readonly string[] SecondaryMoods =
-    {
-        "💪 Confident", "🧐 Curious",
-        "🌅 Nostalgic", "😑 Bored",
-        "😠 Angry", "😔 Lonely"
-    };
+    private string CustomTagName = "";
+    private string CustomCategoryName = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -162,6 +236,12 @@
             if (existing != null)
             {
                 model = existing;
+                var predefined = new[] { "Personal", "Work", "Health", "Relationships", "Personal Growth" };
+                if (!string.IsNullOrEmpty(model.Category) && !predefined.Contains(model.Category))
+                {
+                    CustomCategoryName = model.Category;
+                    model.Category = "Other";
+                }
             }
         }
         else if (query["date"] != null)
@@ -180,6 +260,12 @@
             if (existing != null)
             {
                 model = existing;
+                var predefined = new[] { "Personal", "Work", "Health", "Relationships", "Personal Growth" };
+                if (!string.IsNullOrEmpty(model.Category) && !predefined.Contains(model.Category))
+                {
+                    CustomCategoryName = model.Category;
+                    model.Category = "Other";
+                }
             }
         }
         editContext = new EditContext(model);
@@ -225,11 +311,45 @@
             model.SecondaryMood2 = mood;
     }
 
+    private void ToggleTag(string tag)
+    {
+        if (model.SelectedTags.Contains(tag))
+            model.SelectedTags.Remove(tag);
+        else
+            model.SelectedTags.Add(tag);
+    }
+
+    private void AddCustomTag()
+    {
+        if (!string.IsNullOrWhiteSpace(CustomTagName))
+        {
+            var tag = CustomTagName.Trim();
+            if (!model.SelectedTags.Contains(tag))
+            {
+                model.SelectedTags.Add(tag);
+            }
+            CustomTagName = "";
+        }
+    }
+
+    private void HandleTagKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddCustomTag();
+        }
+    }
+
     private async Task HandleSubmit()
     {
         if (_quillReady)
         {
             model.Content = await JS.InvokeAsync<string>("getQuillHtml");
+        }
+
+        if (model.Category == "Other")
+        {
+            model.Category = CustomCategoryName;
         }
 
         if (editContext != null && editContext.Validate())

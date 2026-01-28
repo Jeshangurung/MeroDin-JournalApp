@@ -1,0 +1,162 @@
+@page "/register"
+@using Journal.Data
+@using Journal.Entities
+@inject AppDbContext Db
+@inject PinService PinService
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<div class="auth-container">
+    <div class="auth-box">
+        <div class="auth-header">
+            <h1 class="auth-logo">Create Account</h1>
+            <p class="auth-subtitle">Join our community of reflective writers</p>
+        </div>
+
+        <div class="auth-content">
+            <div class="info-view">
+                <div class="input-group">
+                    <input type="text" class="username-input" @bind="Model.Username" placeholder="Username" />
+                </div>
+                <div class="input-group">
+                    <input type="email" class="email-input" @bind="Model.Email" placeholder="Email Address" />
+                </div>
+                <div class="input-group">
+                    <input type="password" class="password-input" @bind="Model.Password" placeholder="Password" />
+                </div>
+                <div class="input-group">
+                    <input type="password" class="password-input" @bind="Model.ConfirmPassword" placeholder="Confirm Password" />
+                </div>
+                <div class="input-group">
+                    <input type="password" class="pin-input" @bind="Model.Pin" placeholder="4-Digit App PIN" maxlength="4" />
+                </div>
+                <div class="input-group">
+                    <input type="password" class="pin-input" @bind="Model.ConfirmPin" placeholder="Confirm PIN" maxlength="4" />
+                </div>
+
+                @if (!string.IsNullOrEmpty(Error))
+                {
+                    <p class="auth-error">@Error</p>
+                }
+
+                <button class="submit-btn" @onclick="HandleRegister" disabled="@IsProcessing">
+                    @(IsProcessing ? "Creating Account..." : "Create Account")
+                </button>
+
+                <div class="auth-footer">
+                    <button class="link-btn" @onclick='() => Nav.NavigateTo("/authentication")'>Already have an account? Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-background">
+        <div class="bg-pattern"></div>
+    </div>
+</div>
+
+@code {
+    private RegisterModel Model = new();
+    private string Error = "";
+    private bool IsProcessing = false;
+
+    private async Task HandleRegister()
+    {
+        if (IsProcessing) return;
+        IsProcessing = true;
+        
+        Error = "";
+
+        Model.Username = Model.Username?.Trim() ?? "";
+        Model.Email = Model.Email?.Trim() ?? "";
+        Model.Password = Model.Password?.Trim() ?? "";
+        Model.ConfirmPassword = Model.ConfirmPassword?.Trim() ?? "";
+        Model.Pin = Model.Pin?.Trim() ?? "";
+        Model.ConfirmPin = Model.ConfirmPin?.Trim() ?? "";
+
+        if (string.IsNullOrWhiteSpace(Model.Username) || 
+            string.IsNullOrWhiteSpace(Model.Email) || 
+            string.IsNullOrWhiteSpace(Model.Password) || 
+            string.IsNullOrWhiteSpace(Model.ConfirmPassword) ||
+            string.IsNullOrWhiteSpace(Model.Pin) ||
+            string.IsNullOrWhiteSpace(Model.ConfirmPin))
+        {
+            Error = "All fields are required.";
+            return;
+        }
+
+        if (Model.Password != Model.ConfirmPassword)
+        {
+            Error = "Passwords do not match.";
+            return;
+        }
+
+        if (Model.Pin != Model.ConfirmPin)
+        {
+            Error = "PINs do not match.";
+            return;
+        }
+
+        if (Model.Pin.Length != 4 || !Model.Pin.All(char.IsDigit))
+        {
+            Error = "PIN must be exactly 4 digits.";
+            return;
+        }
+
+        try 
+        {
+            // Ensure DB is ready
+            Db.Database.EnsureCreated();
+
+            // Check if user exists
+            var existing = Db.Users.Any(u => u.Username.ToLower() == Model.Username.ToLower() || u.Email.ToLower() == Model.Email.ToLower());
+            if (existing)
+            {
+                Error = "Username or Email already exists.";
+                return;
+            }
+
+            var newUser = new User
+            {
+                Username = Model.Username,
+                Email = Model.Email,
+                PasswordHash = PinService.HashPin(Model.Password),
+                PinHash = PinService.HashPin(Model.Pin),
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            Db.Users.Add(newUser);
+            await Db.SaveChangesAsync();
+
+            // Auto-login
+            Auth.Authenticate(newUser);
+            Nav.NavigateTo("/authentication"); // Send to PIN verification
+        }
+        catch (Exception ex)
+        {
+            var msg = ex.Message;
+            var inner = ex.InnerException;
+            while (inner != null)
+            {
+                msg += " → " + inner.Message;
+                inner = inner.InnerException;
+            }
+            Error = "Error creating account: " + msg;
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private class RegisterModel
+    {
+        public string Username { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string ConfirmPassword { get; set; } = "";
+        public string Pin { get; set; } = "";
+        public string ConfirmPin { get; set; } = "";
+    }
+}

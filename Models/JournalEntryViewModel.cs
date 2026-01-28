@@ -24,5 +24,6 @@ namespace Journal.Models
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public bool IsPublic { get; set; }
+        public List<string> SelectedTags { get; set; } = new();
     }
 }

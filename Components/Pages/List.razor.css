@@ -125,6 +125,45 @@
     cursor: pointer;
 }
 
+.quick-tags {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.quick-tags-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-color);
+    letter-spacing: 0.05em;
+}
+
+.quick-tag {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-tag:hover {
+    border-color: var(--text-color);
+    color: var(--text-color);
+}
+
+.quick-tag.active {
+    background: var(--text-color);
+    color: var(--white);
+    border-color: var(--text-color);
+}
+
 .entry-card:hover {
     border-color: var(--accent-color);
     transform: translateX(4px);
@@ -207,6 +246,7 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    margin-bottom: 1.5rem;
 }
 
 .tag {

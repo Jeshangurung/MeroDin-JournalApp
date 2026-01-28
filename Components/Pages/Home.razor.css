@@ -146,17 +146,16 @@
 }
 
 .mood-bar.positive {
-    background: var(--accent-color);
+    background: #000000;
+    /* Matching the premium black theme */
 }
 
 .mood-bar.neutral {
-    background: var(--text-muted);
-    opacity: 0.5;
+    background: #888888;
 }
 
 .mood-bar.negative {
-    background: var(--text-muted);
-    opacity: 0.3;
+    background: #dddddd;
 }
 
 .mood-percentage {
@@ -166,38 +165,63 @@
     color: var(--text-color);
 }
 
-.tag-cloud {
+.frequent-mood-info {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-color);
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 1rem 0;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.tag-item {
-    background: var(--border-color);
-    padding: 0.5rem 1.5rem;
-    border-radius: 20px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    cursor: pointer;
+.info-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    font-weight: 700;
     color: var(--text-color);
 }
 
-.tag-item:hover {
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 1.5rem 0;
+    justify-content: center;
+    align-items: center;
+}
+
+.cloud-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    font-weight: 600;
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.cloud-tag:hover {
+    border-color: var(--accent-color);
+    transform: scale(1.05);
     background: var(--accent-color);
     color: var(--accent-text);
 }
 
-.tag-item.large {
-    font-size: 1.125rem;
-}
-
-.tag-item.medium {
-    font-size: 1rem;
-}
-
-.tag-item.small {
-    font-size: 0.875rem;
+.tag-count {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    font-weight: 400;
 }
 
 .recent-entries {

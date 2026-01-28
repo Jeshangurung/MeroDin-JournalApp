@@ -1,0 +1,105 @@
+@page "/public-wall"
+@using Journal.Models
+@using Journal.Services
+@inject IJournalService JournalService
+@inject NavigationManager Nav
+
+<div class="public-container">
+    <div class="public-header">
+        <div class="header-content">
+            <h1 class="premium-title">Community Wall</h1>
+            <p class="premium-subtitle">Shared reflections from the community</p>
+        </div>
+        <div class="header-actions">
+            <button class="refresh-btn" @onclick="LoadEntries">
+                <i class="refresh-icon"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Gathering reflections...</p>
+        </div>
+    }
+    else if (Entries == null || !Entries.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">🌍</div>
+            <h3>No public entries yet</h3>
+            <p>Be the first to share your thoughts with the world!</p>
+            <button class="action-btn" @onclick='() => Nav.NavigateTo("/write")'>Write an entry</button>
+        </div>
+    }
+    else
+    {
+        <div class="entries-grid">
+            @foreach (var entry in Entries)
+            {
+                <div class="entry-card">
+                    <div class="entry-card-header">
+                        <div class="author-info">
+                            <div class="author-avatar">@entry.Author[0]</div>
+                            <div class="author-details">
+                                <span class="author-name">@entry.Author</span>
+                                <span class="entry-date">@entry.EntryDate.ToString("MMM dd, yyyy")</span>
+                            </div>
+                        </div>
+                        <div class="mood-badge">@entry.PrimaryMood</div>
+                    </div>
+                    
+                    <div class="entry-card-body">
+                        <p class="entry-preview">@entry.ContentPreview</p>
+                        
+                        @if (entry.Tags.Any())
+                        {
+                            <div class="entry-tags">
+                                @foreach (var tag in entry.Tags)
+                                {
+                                    <span class="tag">#@tag</span>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="entry-card-footer">
+                        <span class="category-tag"># @entry.Category</span>
+                        <span class="word-count">@entry.WordCount words</span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<JournalEntryDisplayModel>? Entries;
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEntries();
+    }
+
+    private async Task LoadEntries()
+    {
+        IsLoading = true;
+        StateHasChanged();
+        
+        try 
+        {
+            Entries = await JournalService.GetPublicEntriesAsync();
+        }
+        catch (Exception ex)
+        {
+            // Log error
+            Entries = new();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

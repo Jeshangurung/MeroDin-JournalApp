@@ -137,8 +137,21 @@
     color: var(--text-color);
 }
 
+.info-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
 .username-input,
-.password-input {
+.password-input,
+.email-input,
+.pin-input {
     width: 100%;
     padding: 1.25rem;
     border: 2px solid var(--border-color);
@@ -148,10 +161,13 @@
     color: var(--text-color);
     background: var(--bg-color);
     text-align: center;
+    box-sizing: border-box;
 }
 
 .username-input:focus,
-.password-input:focus {
+.password-input:focus,
+.email-input:focus,
+.pin-input:focus {
     outline: none;
     border-color: var(--accent-color);
 }
@@ -161,6 +177,25 @@
     color: var(--text-muted);
     font-size: 0.9rem;
     margin-bottom: 0.5rem;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 1.25rem;
+    background: var(--accent-color);
+    color: var(--accent-text);
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+}
+
+.submit-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
 }
 
 .auth-error {

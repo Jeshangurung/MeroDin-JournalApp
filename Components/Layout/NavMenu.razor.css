@@ -99,5 +99,55 @@
         /* Allow sidebar to scroll for tall menus */
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
+
+    .flex-column {
+        flex-grow: 1;
+    }
+}
+
+/* ===== User Profile Section ===== */
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--sidebar-bg);
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    background: var(--accent-color);
+    color: var(--accent-text);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.user-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--nav-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-status {
+    font-size: 0.7rem;
+    color: var(--text-muted);
 }

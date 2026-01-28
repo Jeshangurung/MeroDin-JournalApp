@@ -10,6 +10,35 @@
 
 <div class="settings-container">
     <h2 class="settings-title">Settings</h2>
+    
+    <div class="settings-section">
+        <h3>Account Information</h3>
+        <div class="account-form">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" class="form-control" @bind="EditUsername" placeholder="Username" />
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" class="form-control" @bind="EditEmail" placeholder="Email" />
+            </div>
+            <div class="form-group">
+                <label>New Password (Leave blank to keep current)</label>
+                <input type="password" class="form-control" @bind="EditPassword" placeholder="New Password" />
+            </div>
+            
+            @if (!string.IsNullOrEmpty(AccountMessage))
+            {
+                <div class="account-message @(AccountIsSuccess ? "success" : "error")">
+                    @AccountMessage
+                </div>
+            }
+
+            <button class="save-account-btn" @onclick="UpdateAccount">
+                Update Profile
+            </button>
+        </div>
+    </div>
 
 <div class="settings-section">
     <h3>Change PIN</h3>
@@ -77,6 +106,21 @@
     string ConfirmPin = "";
     string Message = "";
 
+    string EditUsername = "";
+    string EditEmail = "";
+    string EditPassword = "";
+    string AccountMessage = "";
+    bool AccountIsSuccess = false;
+
+    protected override void OnInitialized()
+    {
+        if (Auth.CurrentUser != null)
+        {
+            EditUsername = Auth.CurrentUser.Username;
+            EditEmail = Auth.CurrentUser.Email;
+        }
+    }
+
     void VerifyCurrentPin()
     {
         if (Auth.CurrentUser == null) return;
@@ -135,5 +179,57 @@
     {
         Auth.Logout();
         Nav.NavigateTo("/authentication", true);
+    }
+
+    async Task UpdateAccount()
+    {
+        if (Auth.CurrentUser == null) return;
+        
+        AccountMessage = "";
+        AccountIsSuccess = false;
+
+        if (string.IsNullOrWhiteSpace(EditUsername) || string.IsNullOrWhiteSpace(EditEmail))
+        {
+            AccountMessage = "Username and Email are required.";
+            return;
+        }
+
+        try 
+        {
+            var user = Db.Users.Find(Auth.CurrentUser.Id);
+            if (user != null)
+            {
+                // Check if username/email already taken by someone else
+                var existing = Db.Users.Any(u => u.Id != user.Id && (u.Username.ToLower() == EditUsername.ToLower() || u.Email.ToLower() == EditEmail.ToLower()));
+                if (existing)
+                {
+                    AccountMessage = "Username or Email already in use.";
+                    return;
+                }
+
+                user.Username = EditUsername;
+                user.Email = EditEmail;
+                
+                if (!string.IsNullOrWhiteSpace(EditPassword))
+                {
+                    user.PasswordHash = PinService.HashPin(EditPassword);
+                }
+
+                user.UpdatedAt = DateTime.Now;
+
+                await Db.SaveChangesAsync();
+                
+                // Refresh local session
+                Auth.Login(user);
+                
+                AccountMessage = "Profile updated successfully.";
+                AccountIsSuccess = true;
+                EditPassword = ""; // Clear password field
+            }
+        }
+        catch (Exception ex)
+        {
+            AccountMessage = "Error updating profile: " + ex.Message;
+        }
     }
 }

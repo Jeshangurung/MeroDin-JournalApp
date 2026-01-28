@@ -7,3 +7,6 @@ obj/
 # Platform-specific (not used)
 Platforms/iOS/
 Platforms/Tizen/
+# Build logs
+build_*.txt
+

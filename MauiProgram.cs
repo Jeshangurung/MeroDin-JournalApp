@@ -53,6 +53,46 @@ using Data;
                 {
                     // Column likely already exists
                 }
+
+                // Add PinHash to Users if missing
+                try
+                {
+                    db.Database.ExecuteSqlRaw("ALTER TABLE Users ADD COLUMN PinHash TEXT;");
+                }
+                catch
+                {
+                    // Column already exists
+                }
+
+                // Add Email to Users if missing
+                try
+                {
+                    db.Database.ExecuteSqlRaw("ALTER TABLE Users ADD COLUMN Email TEXT;");
+                }
+                catch
+                {
+                    // Column already exists
+                }
+
+                // Add CreatedAt to Users if missing
+                try
+                {
+                    db.Database.ExecuteSqlRaw("ALTER TABLE Users ADD COLUMN CreatedAt TEXT NOT NULL DEFAULT '2024-01-01';");
+                }
+                catch
+                {
+                    // Column already exists
+                }
+
+                // Add UpdatedAt to Users if missing
+                try
+                {
+                    db.Database.ExecuteSqlRaw("ALTER TABLE Users ADD COLUMN UpdatedAt TEXT NOT NULL DEFAULT '2024-01-01';");
+                }
+                catch
+                {
+                    // Column already exists
+                }
             }
 
             return app;
