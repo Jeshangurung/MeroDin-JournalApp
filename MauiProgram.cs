@@ -7,10 +7,20 @@ using Journal.Services;
 namespace Journal;
 using Data;
 
-    public static class MauiProgram
+/// <summary>
+/// This class serves as the entry point for the MAUI application, responsible for
+/// bootstrapping the application, configuring dependency injection, and handling
+/// initial database setup and schema consistency.
+/// </summary>
+public static class MauiProgram
+{
+    /// <summary>
+    /// Creates and configures the standard MAUI application environment.
+    /// Includes font registration, service registration, and database initialization.
+    /// </summary>
+    /// <returns>A fully configured MauiApp instance.</returns>
+    public static MauiApp CreateMauiApp()
     {
-        public static MauiApp CreateMauiApp()
-        {
         QuestPDF.Settings.License = LicenseType.Community;
 
         var builder = MauiApp.CreateBuilder();
@@ -28,9 +38,11 @@ using Data;
             builder.Logging.AddDebug();
 
 #endif
-            // ✅ Register your AppDbContext for DI
-            builder.Services.AddDbContext<AppDbContext>();
-            builder.Services.AddScoped<IJournalService, JournalService>();
+        // Register the database context using dependency injection.
+        builder.Services.AddDbContext<AppDbContext>();
+        
+        // Register business logic services and application state managers.
+        builder.Services.AddScoped<IJournalService, JournalService>();
             builder.Services.AddScoped<PinService>();
             builder.Services.AddScoped<AuthStateService>();
             builder.Services.AddScoped<ThemeService>();
@@ -41,10 +53,13 @@ using Data;
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 
-                // Ensure the database is created if it doesn't exist
+                // Ensure the base database file is established.
                 db.Database.EnsureCreated();
 
-                // Manual Migration: Add IsPublic column if it doesn't exist
+                // The following blocks handle manual database schema updates for existing installations.
+                // Using try-catch blocks to safely attempt column additions which may already exist.
+
+                // Ensure the IsPublic flag is available for community sharing features.
                 try
                 {
                     db.Database.ExecuteSqlRaw("ALTER TABLE JournalEntries ADD COLUMN IsPublic INTEGER NOT NULL DEFAULT 0;");

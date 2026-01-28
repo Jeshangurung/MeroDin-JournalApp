@@ -10,6 +10,15 @@
 @inject AppDbContext Db
 @inject AuthStateService Auth
 
+@code {
+    /// <summary>
+    /// This component provides a comprehensive editing experience for journal entries,
+    /// supporting rich text, mood tracking, categorization, and tag management.
+    /// It dynamically adapts to creating new entries, editing existing ones, or 
+    /// writing for specific past dates.
+    /// </summary>
+}
+
 @if (editContext == null)
 {
     <div class="loading-container">
@@ -215,6 +224,7 @@ else
     private bool IsEdit => Id.HasValue;
     private DotNetObjectReference<Write>? _objRef;
 
+    // Mood definitions categorized by emotional tone for consistent UI selection.
     private readonly string[] PositiveMoods = { "😊 Happy", "🤩 Excited", "😌 Relaxed", "🙏 Grateful", "💪 Confident" };
     private readonly string[] NeutralMoods = { "😐 Calm", "💭 Thoughtful", "🧐 Curious", "🌅 Nostalgic", "😑 Bored" };
     private readonly string[] NegativeMoods = { "😢 Sad", "😠 Angry", "😰 Stressed", "😔 Lonely", "😟 Anxious" };
@@ -336,7 +346,8 @@ else
     {
         if (firstRender && editContext != null)
         {
-            // Initialize the Quill editor only after the container div is rendered
+            // Initializes the third-party Quill editor via JavaScript Interop.
+            // A DotNetObjectReference is passed to allow the editor to send data back to C#.
             await JS.InvokeVoidAsync("initQuill", EditorId, _objRef);
             _quillReady = true;
             await JS.InvokeVoidAsync("setQuillHtml", model.Content ?? string.Empty);
@@ -351,6 +362,9 @@ else
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Calculates the word count of the entry by stripping HTML tags from the editor content.
+    /// </summary>
     private int WordCount =>
         string.IsNullOrWhiteSpace(model.Content)
             ? 0
@@ -401,6 +415,10 @@ else
         }
     }
 
+    /// <summary>
+    /// Processes form submission, finalizes model data, and commits changes to the database.
+    /// Handles post-save redirects and state resets based on the context.
+    /// </summary>
     private async Task HandleSubmit()
     {
         if (_quillReady)

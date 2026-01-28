@@ -10,6 +10,14 @@
 @inject AuthStateService Auth
 @inject Journal.Services.IJournalService JournalService
 
+@code {
+    /// <summary>
+    /// This component provides a visual monthly calendar view of journal entries.
+    /// It highlights days with existing entries and allows navigation to deep-edit 
+    /// entries for specific dates.
+    /// </summary>
+}
+
 <h3>Calendar</h3>
 
 <main class="calendar-container">
@@ -94,6 +102,7 @@
 
     async Task GoToToday()
     {
+        // Re-centers the calendar on the current month.
         CurrentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         await LoadCalendar();
     }
@@ -118,6 +127,8 @@
                         e.EntryDate.Year == CurrentMonth.Year)
             .ToListAsync();
 
+        // Generates a 42-day grid (6 weeks) to ensure the entire month and 
+        // surrounding overlap days are fully represented.
         for (int i = 0; i < 42; i++)
         {
             var date = startDay.AddDays(i);
@@ -178,6 +189,9 @@
         return "📝";
     }
 
+    /// <summary>
+    /// Represents a single day cell within the calendar display grid.
+    /// </summary>
     class CalendarDay
     {
         public DateTime Date { get; set; }

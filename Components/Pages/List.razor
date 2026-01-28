@@ -3,6 +3,14 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
+@code {
+    /// <summary>
+    /// This component provides a comprehensive list view of personal journal entries
+    /// with advanced filtering capabilities including keyword search, date ranges,
+    /// mood categorization, and tag-based filtering with server-side pagination.
+    /// </summary>
+}
+
 <h1 class="page-title">All Entries</h1>
 
 <!-- 🔍 SEARCH & FILTER BAR -->
@@ -140,6 +148,10 @@ else
         await LoadEntries();
     }
 
+    /// <summary>
+    /// Retrieves journal entries from the service based on the current filter state.
+    /// Implements server-side pagination to efficiently handle large result sets.
+    /// </summary>
     private async Task LoadEntries()
     {
         Loading = true;
@@ -159,6 +171,9 @@ else
         Loading = false;
     }
 
+    /// <summary>
+    /// Applies all selected filters and resets pagination to the first page.
+    /// </summary>
     private async Task ApplyFilters()
     {
         Page = 1;
@@ -190,6 +205,10 @@ else
         }
     }
 
+    /// <summary>
+    /// Toggles a specific tag filter on or off for quick filtering.
+    /// If the tag is already active, it deselects it; otherwise, it activates it.
+    /// </summary>
     private async Task ToggleQuickTag(string tag)
     {
         if (SearchTag == tag)

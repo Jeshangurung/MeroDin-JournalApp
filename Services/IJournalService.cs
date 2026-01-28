@@ -2,9 +2,14 @@
 
 namespace Journal.Services
 {
+    /// <summary>
+    /// Defines the contract for journal entry management operations.
+    /// This interface supports CRUD operations, advanced search capabilities,
+    /// document export, and community features with pagination.
+    /// </summary>
     public interface IJournalService
     {
-        // CREATE / UPDATE
+        // CREATE / UPDATE operations for creating new entries or modifying existing ones.
         Task<bool> CreateOrUpdateTodayAsync(JournalEntryViewModel model);
         Task<bool> CreateOrUpdateAsync(JournalEntryViewModel model, int? id = null);
 
@@ -15,7 +20,7 @@ namespace Journal.Services
         // LIST (basic)
         Task<List<JournalEntryDisplayModel>> GetAllAsync();
 
-        // 🔍 SEARCH + FILTER + PAGINATION (NEW)
+        // Advanced search and filtering with server-side pagination for scalability.
         Task<PagedResult<JournalEntryDisplayModel>> SearchAsync(
             string? searchText,
             DateTime? fromDate,
@@ -25,7 +30,11 @@ namespace Journal.Services
             int page,
             int pageSize
         );
+        
+        // Community features for retrieving public entries shared by all users.
         Task<PagedResult<JournalEntryDisplayModel>> GetPublicEntriesPagedAsync(string? searchText, int page, int pageSize);
+        
+        // Utility methods for tag management and document generation.
         Task<List<string>> GetAllTagsAsync();
         Task<byte[]> ExportPdfAsync(DateTime from, DateTime to);
 

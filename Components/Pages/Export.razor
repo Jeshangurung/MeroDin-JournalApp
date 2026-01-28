@@ -1,6 +1,14 @@
 ﻿@page "/export"
 @inject Journal.Services.IJournalService JournalService
 
+@code {
+    /// <summary>
+    /// This component facilitates the export of journal entries to a formatted PDF document.
+    /// It handles date range selection, document generation via QuestPDF, and saves the
+    /// output to the user's desktop with intelligent error handling for file conflicts.
+    /// </summary>
+}
+
 <div class="export-container">
     <h1 class="page-title">Export Journals</h1>
     <p class="export-subtitle">Archive your reflections as a PDF document.</p>
@@ -54,7 +62,8 @@
 
             var pdfBytes = await JournalService.ExportPdfAsync(FromDate, ToDate);
 
-            // Generate unique filename to avoid "process cannot access file" error
+            // Generates a unique filename using the current timestamp to avoid 
+            // file access conflicts when multiple exports are performed in succession.
             var timestamp = DateTime.Now.ToString("HHmmss");
             var filename = $"Journal_{FromDate:yyyyMMdd}_{ToDate:yyyyMMdd}_{timestamp}.pdf";
             
@@ -68,6 +77,7 @@
         }
         catch (IOException)
         {
+            // Handles file system errors such as permission issues or locked files.
             IsError = true;
             Status = "Error: Please close the previous PDF before exporting again.";
         }

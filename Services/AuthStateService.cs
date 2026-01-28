@@ -2,6 +2,11 @@
 using Journal.Data;
 using Microsoft.EntityFrameworkCore;
 
+/// <summary>
+/// Manages user authentication and session state throughout the application lifecycle.
+/// Implements a two-tier security model: authentication (password) and unlocking (PIN).
+/// State changes trigger notifications to subscribed UI components via the OnChange event.
+/// </summary>
 public class AuthStateService
 {
     private readonly AppDbContext _db;
@@ -23,6 +28,10 @@ public class AuthStateService
         InitializeAsync().Wait(); // Synchronous wait for startup (simple for Scoped service)
     }
 
+    /// <summary>
+    /// Attempts to restore the last authenticated user from persistent storage.
+    /// This enables automatic login for returning users who chose to be remembered.
+    /// </summary>
     private async Task InitializeAsync()
     {
         if (Preferences.Default.ContainsKey(AuthUserIdKey))
@@ -46,6 +55,9 @@ public class AuthStateService
         NotifyStateChanged();
     }
 
+    /// <summary>
+    /// Grants full application access after successful PIN verification.
+    /// </summary>
     public void Unlock()
     {
         IsUnlocked = true;
@@ -58,6 +70,9 @@ public class AuthStateService
         NotifyStateChanged();
     }
 
+    /// <summary>
+    /// Completely terminates the user session and clears all persistent authentication data.
+    /// </summary>
     public void Logout()
     {
         CurrentUser = null;

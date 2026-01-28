@@ -5,6 +5,14 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
+@code {
+    /// <summary>
+    /// This component facilitates community interaction by displaying a feed of 
+    /// explicitly shared journal entries. It implements server-side pagination
+    /// and keyword-based filtering to ensure high performance even with large datasets.
+    /// </summary>
+}
+
 <div class="public-container">
     <div class="public-header">
         <div class="header-content">
@@ -130,7 +138,7 @@
         
         try 
         {
-            // Call the paged service method with search support
+            // Executes the paged retrieval request with the current search and page context.
             var result = await JournalService.GetPublicEntriesPagedAsync(SearchText, CurrentPage, PageSize);
             
             Entries = result.Items;
@@ -184,7 +192,7 @@
             CurrentPage = newPage;
             await LoadEntries();
             
-            // Scroll to top of the grid for better UX
+            // Provides visual feedback by resetting the view position to the start of the list.
             await JS.InvokeVoidAsync("window.scrollTo", 0, 0);
         }
     }

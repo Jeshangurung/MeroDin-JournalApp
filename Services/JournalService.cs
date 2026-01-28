@@ -9,6 +9,10 @@ using QuestPDF.Infrastructure;
 
 namespace Journal.Services
 {
+    /// <summary>
+    /// This service handles the core business logic for journal management,
+    /// including CRUD operations, data mapping, community sharing, and document export.
+    /// </summary>
     public class JournalService : IJournalService
     {
         private readonly AppDbContext _context;
@@ -20,9 +24,17 @@ namespace Journal.Services
             _auth = auth;
         }
 
+        /// <summary>
+        /// Retrieves the ID of the currently authenticated user for data isolation.
+        /// </summary>
         private int CurrentUserId => _auth.CurrentUser?.Id ?? throw new Exception("Unauthorized access");
 
-        // CREATE or UPDATE a journal entry
+        /// <summary>
+        /// Core method for saving or updating journal entries and managing complex tag relationships.
+        /// </summary>
+        /// <param name="model">The data model containing user input.</param>
+        /// <param name="id">Optional ID for updating existing records.</param>
+        /// <returns>A boolean indicating success.</returns>
         public async Task<bool> CreateOrUpdateAsync(JournalEntryViewModel model, int? id = null)
         {
             JournalEntry? entry = null;
@@ -62,7 +74,8 @@ namespace Journal.Services
 
             await _context.SaveChangesAsync();
 
-            // ===== Tag Handling =====
+            // Synchronizes the many-to-many relationship between journal entries and tags.
+            // Existing relationships are refreshed based on current user selection.
             var existingTags = _context.JournalTags.Where(jt => jt.JournalEntryId == entry.Id);
             _context.JournalTags.RemoveRange(existingTags);
 
@@ -105,6 +118,7 @@ namespace Journal.Services
 
         public async Task<JournalEntryViewModel?> GetByIdAsync(int id)
         {
+            // Fetches a specific entry based on ID and owner ID for security.
             var entry = await _context.JournalEntries
                 .Include(j => j.JournalTags)
                 .ThenInclude(jt => jt.Tag)
@@ -135,7 +149,9 @@ namespace Journal.Services
             };
         }
 
-        // READ all journal entries (timeline / list)
+        /// <summary>
+        /// Retrieves all journal entries for the current user, ordered chronologically.
+        /// </summary>
         public async Task<List<JournalEntryDisplayModel>> GetAllAsync()
         {
             var entries = await _context.JournalEntries
@@ -196,6 +212,9 @@ namespace Journal.Services
             return true;
         }
 
+        /// <summary>
+        /// Compiles and generates a professional PDF archive of journal entries for a given period.
+        /// </summary>
         public async Task<byte[]> ExportPdfAsync(DateTime from, DateTime to)
         {
             var entries = await _context.JournalEntries
